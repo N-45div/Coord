@@ -1,0 +1,120 @@
+........................................................................ [ 14%]
+........................................................................ [ 29%]
+...........s......................................s..................... [ 43%]
+........................................................................ [ 58%]
+.............................................s.......................... [ 73%]
+.....................................................F.................. [ 87%]
+......F.......F................F............................             [100%]
+================================== FAILURES ===================================
+_______________________ test_create_pair_response_shape _______________________
+
+cw = <tk.World object at 0x000001E2FB69EC90>
+api = <tk.Api object at 0x000001E2FB69E4E0>
+
+    @pytest.mark.ledger("S2-034", "S2-035", "S2-031")
+    def test_create_pair_response_shape(cw, api):
+        r = api.create(cw.ada, cb(["c_3", "c_2"], party=6))
+        expect(r, 201)
+>       tk.assert_res(r.json, COMBO, ["c_3", "c_2"], T, 6, "confirmed")
+
+test_20_combined.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+res = {'created_at': '2026-10-05T18:34:09+00:00', 'ends_at': '2027-06-17T20:30:00+02:00', 'party_size': 6, 'reference': 'KCTYHV4Q', ...}
+rest = {'cancellation_cutoff_minutes': 120, 'combinable': [['c_1', 'c_2'], ['c_3', 'c_2'], ['c_4', 'c_1']], 'id': 'r_combo', 'name': 'Gasthaus Linde', ...}
+table = ['c_3', 'c_2'], local = '2027-06-17T19:00', party = 6
+status = 'confirmed'
+
+    def assert_res(res, rest=None, table=None, local=None, party=None, status=None):
+        assert isinstance(res, dict), res
+        missing = RES_KEYS - set(res)
+>       assert not missing, f"reservation lacks {sorted(missing)}: {res}"
+E       AssertionError: reservation lacks ['table_id']: {'reservation_id': 'res_1', 'reference': 'KCTYHV4Q', 'restaurant_id': 'r_combo', 'table_ids': ['c_3', 'c_2'], 'party_size': 6, 'status': 'confirmed', 'starts_at_local': '2027-06-17T19:00', 'starts_at': '2027-06-17T19:00:00+02:00', 'ends_at': '2027-06-17T20:30:00+02:00', 'created_at': '2026-10-05T18:34:09+00:00'}
+
+tk.py:240: AssertionError
+_____________________ test_patch_single_to_pair_and_back ______________________
+
+cw = <tk.World object at 0x000001E2FD36F770>
+api = <tk.Api object at 0x000001E2FFC1C8F0>
+
+    @pytest.mark.ledger("S2-039", "S2-035")
+    def test_patch_single_to_pair_and_back(cw, api):
+        m = expect(api.create(cw.ada, cb("c_2", party=3)), 201)
+        p = api.patch(cw.ada, m["reference"], {"table_ids": ["c_1", "c_2"], "party_size": 6})
+        expect(p, 200)
+>       tk.assert_res(p.json, COMBO, ["c_1", "c_2"], T, 6)
+
+test_20_combined.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+res = {'created_at': '2026-10-05T18:34:23+00:00', 'ends_at': '2027-06-17T20:30:00+02:00', 'party_size': 6, 'reference': 'VOYFDBEJ', ...}
+rest = {'cancellation_cutoff_minutes': 120, 'combinable': [['c_1', 'c_2'], ['c_3', 'c_2'], ['c_4', 'c_1']], 'id': 'r_combo', 'name': 'Gasthaus Linde', ...}
+table = ['c_1', 'c_2'], local = '2027-06-17T19:00', party = 6, status = None
+
+    def assert_res(res, rest=None, table=None, local=None, party=None, status=None):
+        assert isinstance(res, dict), res
+        missing = RES_KEYS - set(res)
+>       assert not missing, f"reservation lacks {sorted(missing)}: {res}"
+E       AssertionError: reservation lacks ['table_id']: {'reservation_id': 'res_1', 'reference': 'VOYFDBEJ', 'restaurant_id': 'r_combo', 'table_ids': ['c_1', 'c_2'], 'party_size': 6, 'status': 'confirmed', 'starts_at_local': '2027-06-17T19:00', 'starts_at': '2027-06-17T19:00:00+02:00', 'ends_at': '2027-06-17T20:30:00+02:00', 'created_at': '2026-10-05T18:34:23+00:00'}
+
+tk.py:240: AssertionError
+__________________________ test_moves_with_table_ids __________________________
+
+cw = <tk.World object at 0x000001E2FD36D2B0>
+api = <tk.Api object at 0x000001E2FD36E1E0>
+
+    @pytest.mark.ledger("S2-040", "S1-100")
+    def test_moves_with_table_ids(cw, api):
+        A = expect(api.create(cw.ada, cb(["c_1", "c_2"], party=5)), 201)
+        B = expect(api.create(cw.ada, cb("c_4", party=2)), 201)
+        r = api.moves(cw.ada, {"moves": [{"reference": A["reference"], "table_ids": ["c_4", "c_1"]},
+                                         {"reference": B["reference"], "table_ids": ["c_3"]}]})
+        expect(r, 201)
+        a, b = r.json["reservations"]
+>       tk.assert_res(a, COMBO, ["c_4", "c_1"], T, 5)
+
+test_20_combined.py:200: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+res = {'created_at': '2026-10-05T18:34:28+00:00', 'ends_at': '2027-06-17T20:30:00+02:00', 'party_size': 5, 'reference': 'YME2MXWR', ...}
+rest = {'cancellation_cutoff_minutes': 120, 'combinable': [['c_1', 'c_2'], ['c_3', 'c_2'], ['c_4', 'c_1']], 'id': 'r_combo', 'name': 'Gasthaus Linde', ...}
+table = ['c_4', 'c_1'], local = '2027-06-17T19:00', party = 5, status = None
+
+    def assert_res(res, rest=None, table=None, local=None, party=None, status=None):
+        assert isinstance(res, dict), res
+        missing = RES_KEYS - set(res)
+>       assert not missing, f"reservation lacks {sorted(missing)}: {res}"
+E       AssertionError: reservation lacks ['table_id']: {'reservation_id': 'res_1', 'reference': 'YME2MXWR', 'restaurant_id': 'r_combo', 'table_ids': ['c_4', 'c_1'], 'party_size': 5, 'status': 'confirmed', 'starts_at_local': '2027-06-17T19:00', 'starts_at': '2027-06-17T19:00:00+02:00', 'ends_at': '2027-06-17T20:30:00+02:00', 'created_at': '2026-10-05T18:34:28+00:00'}
+
+tk.py:240: AssertionError
+_____________________ test_grid_matches_availability_api ______________________
+
+uw = <tk.World object at 0x000001E2FFC5DF40>
+page = <Page url='http://127.0.0.1:18386/'>
+api = <tk.Api object at 0x000001E2FFC5F050>
+
+    @pytest.mark.ledger("S2-005", "S2-006", "S2-010")
+    def test_grid_matches_availability_api(uw, page, api):
+        api.book(uw.bob, "r_combo", "c_2", T19)
+        expect(api.create(uw.cy, {"restaurant_id": "r_combo", "table_ids": ["c_4", "c_1"],
+                                  "starts_at_local": f"{THU}T20:30", "party_size": 7}), 201)
+        page.goto(ui.url("/"))
+        values = T(page, "restaurant-select").locator("option").evaluate_all("os => os.map(o => o.value)")
+>       assert {"r_combo", "r_anker"} <= set(values), values
+E       AssertionError: ['']
+E       assert {'r_anker', 'r_combo'} <= {''}
+E         
+E         Extra items in the left set:
+E         'r_combo'
+E         'r_anker'
+
+test_30_browser.py:146: AssertionError
+=========================== short test summary info ===========================
+FAILED test_20_combined.py::test_create_pair_response_shape - AssertionError:...
+FAILED test_20_combined.py::test_patch_single_to_pair_and_back - AssertionErr...
+FAILED test_20_combined.py::test_moves_with_table_ids - AssertionError: reser...
+FAILED test_30_browser.py::test_grid_matches_availability_api - AssertionErro...
+SKIPPED [1] test_10_runtime.py:22: TK_STARTUP_SECONDS not provided (set by candidate.py)
+SKIPPED [1] test_10_runtime.py:263: needs candidate.py (TK_SECOND_STARTUP_SECONDS)
+SKIPPED [1] test_13_create.py:113: null for a required string: missing (422) or wrong type (400) is not decided by the spec
+4 failed, 485 passed, 3 skipped in 552.53s (0:09:12)

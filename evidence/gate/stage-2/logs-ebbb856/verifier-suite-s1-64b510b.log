@@ -1,0 +1,36 @@
+...F.................................................................... [ 17%]
+........................................................................ [ 35%]
+...........s......................................s..................... [ 53%]
+........................................................................ [ 71%]
+.............................................s.......................... [ 88%]
+.............................................                            [100%]
+================================== FAILURES ===================================
+__________ test_parallel_same_key_different_bodies_take_effect_once ___________
+
+api = <tk.Api object at 0x000001C6C63AFB90>
+
+    @pytest.mark.ledger("S1-040", "S1-045", "S1-006")
+    def test_parallel_same_key_different_bodies_take_effect_once(api):
+        w = tk.World(api)
+        key = tk.new_key()
+        bodies = [body("r_big", f"b_{1 + i % 10}", f"{THU}T{10 + i // 10:02d}:00", 2) for i in range(20)]
+        res = tk.parallel([(lambda a, b=b: a.create(w.ada, b, key=key)) for b in bodies])
+>       tk.assert_all_responses(res)
+
+test_01_concurrency.py:92: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+results = [<POST http://127.0.0.1:18389/reservations -> 409 '{"error":{"code":"idempotency_key_reuse","message":"this Idempotenc... '{"error":{"code":"idempotency_key_reuse","message":"this Idempotency-Key was used with a different request"}}'>, ...]
+
+    def assert_all_responses(results):
+        for r in results:
+>           assert isinstance(r, R), f"request failed without an HTTP response (timeout > 5 s?): {r!r}"
+E           AssertionError: request failed without an HTTP response (timeout > 5 s?): ConnectError('[WinError 10055] An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full')
+
+tk.py:315: AssertionError
+=========================== short test summary info ===========================
+FAILED test_01_concurrency.py::test_parallel_same_key_different_bodies_take_effect_once
+SKIPPED [1] test_10_runtime.py:22: TK_STARTUP_SECONDS not provided (set by candidate.py)
+SKIPPED [1] test_10_runtime.py:263: needs candidate.py (TK_SECOND_STARTUP_SECONDS)
+SKIPPED [1] test_13_create.py:113: null for a required string: missing (422) or wrong type (400) is not decided by the spec
+1 failed, 401 passed, 3 skipped in 389.27s (0:06:29)

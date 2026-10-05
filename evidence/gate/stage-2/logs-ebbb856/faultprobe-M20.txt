@@ -1,0 +1,5 @@
+FAILED test_30_browser.py::test_late_search_response_never_restores_old_results
+1 failed, 19 passed, 1 deselected in 34.04s
+SUMMARY pass=81 fail=2 note=2 27.2s
+FAILED S2-009 late response A must not restore A: B=('false', 'true') after A arrived=('true', 'true')
+FAILED S2-009 booking form describes B (party 5)

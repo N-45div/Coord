@@ -1,0 +1,4 @@
+FAILED test_30_browser.py::test_book_confirm_resubmit_and_change - playwright...
+1 failed, 12 passed, 1 deselected in 27.05s
+SUMMARY pass=41 fail=1 note=0 45.3s
+FAILED PROBE probe crashed: TimeoutError('Locator.inner_text: Timeout 30000ms exceeded.\nCall log:\n  - waiting for get_by_test_id("confirmation-reference")\n')

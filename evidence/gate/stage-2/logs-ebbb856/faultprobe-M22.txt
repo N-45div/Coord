@@ -1,0 +1,6 @@
+FAILED test_30_browser.py::test_lost_response_then_retry_recovers_original[single]
+1 failed, 16 passed, 1 deselected in 32.75s
+SUMMARY pass=80 fail=3 note=2 45.4s
+FAILED S2-015 no booking-uncertain after lost response
+FAILED S2-015 no booking-error, no confirmation while uncertain
+FAILED S2-015 no booking-uncertain (lost before commit)

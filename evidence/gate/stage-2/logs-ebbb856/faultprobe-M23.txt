@@ -1,0 +1,5 @@
+FAILED test_20_combined.py::test_pair_booking_blocks_members_and_every_pair_containing_them
+1 failed, 6 passed, 3 deselected in 2.63s
+SUMMARY pass=51 fail=2 note=4 0.7s
+FAILED S2-032 seeded pair+single block, cancelled seed frees t_3: {'starts_at_local': '2026-11-19T19:00', 'starts_at': '2026-11-19T19:00:00+01:00', 'available_table_ids': ['t_3'], 'available_options': [{'table_ids': ['t_3'], 'capacity': 4}, {'table_ids': ['t_3', 't_2'], 'capacity': 8}]}
+FAILED S2-037 pair occupies both members and every pair containing them: {'starts_at_local': '2026-11-12T19:00', 'starts_at': '2026-11-12T19:00:00+01:00', 'available_table_ids': ['t_3', 't_4'], 'available_options': [{'table_ids': ['t_3'], 'capacity': 4}, {'table_ids': ['t_4'], 'capacity': 2}, {'table_ids': ['t_3'

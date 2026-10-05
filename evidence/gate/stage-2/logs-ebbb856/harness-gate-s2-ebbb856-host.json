@@ -1,0 +1,87 @@
+{
+  "revision": "ebbb856b1ae32dd1f913af50528b97e3f5232464",
+  "track": "tablekeeper",
+  "stages": {
+    "1": "pass",
+    "2": "pass"
+  },
+  "highest_contiguous": 2,
+  "started_at": "2026-10-05T18:27:11.576102+00:00",
+  "finished_at": "2026-10-05T18:30:37.190573+00:00",
+  "schema_version": 2,
+  "run_id": "67f558ae464b4e73895975c3f7f8bd7a",
+  "mode": "host",
+  "provenance": "working-tree",
+  "state": "completed",
+  "pytest_args": [],
+  "suite_digest": "678442e0c2f809a9fda12d8446a4cc42f19842a3579b1ede8ab25a2bea288731",
+  "checks": {
+    "1": {
+      "collected": 120,
+      "passed": 120,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "deselected": 0,
+      "xfailed": 0,
+      "files": {
+        "stage_1/test_health_reset_auth.py": {
+          "passed": 12,
+          "total": 12
+        },
+        "stage_1/test_reservations.py": {
+          "passed": 37,
+          "total": 37
+        },
+        "stage_1/test_restaurants_availability.py": {
+          "passed": 18,
+          "total": 18
+        },
+        "stage_1/test_retries_time_input.py": {
+          "passed": 20,
+          "total": 20
+        },
+        "stage_1/test_sample.py": {
+          "passed": 20,
+          "total": 20
+        },
+        "stage_1/test_seeded_state.py": {
+          "passed": 13,
+          "total": 13
+        }
+      }
+    },
+    "2": {
+      "collected": 25,
+      "passed": 25,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "deselected": 0,
+      "xfailed": 0,
+      "files": {
+        "stage_2/test_sample.py": {
+          "passed": 8,
+          "total": 8
+        },
+        "stage_2/test_ui.py": {
+          "passed": 17,
+          "total": 17
+        }
+      }
+    }
+  },
+  "overshoot": null,
+  "claimed_stage": "2",
+  "share": 1.0,
+  "upgrade_sources": {
+    "2": {
+      "folder": "C:\\Users\\DivijN\\dark-factory\\band-work\\scratch\\gate\\ebbb856\\stage-1",
+      "revision": "ebbb856b1ae32dd1f913af50528b97e3f5232464"
+    },
+    "3": {
+      "folder": "C:\\Users\\DivijN\\dark-factory\\band-work\\scratch\\gate\\ebbb856\\stage-2",
+      "revision": "ebbb856b1ae32dd1f913af50528b97e3f5232464"
+    }
+  }
+}

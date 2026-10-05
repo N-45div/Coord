@@ -1,0 +1,6 @@
+FAILED test_20_combined.py::test_pair_booking_blocks_members_and_every_pair_containing_them
+1 failed, 6 passed, 3 deselected in 2.84s
+SUMMARY pass=22 fail=10 note=4 0.4s
+FAILED S2-034 create pair given in reverse order: expected 201  got <422 b'{"error":{"code":"party_exceeds_capacity","message":"the party is larger than the seating"}}'>
+FAILED S2-035 pair response table_ids in combinable order, no table_id: {}
+FAILED S2-022/A-22 pair booking fields

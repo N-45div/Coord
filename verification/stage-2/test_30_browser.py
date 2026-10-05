@@ -142,6 +142,10 @@ def test_grid_matches_availability_api(uw, page, api):
     expect(api.create(uw.cy, {"restaurant_id": "r_combo", "table_ids": ["c_4", "c_1"],
                               "starts_at_local": f"{THU}T20:30", "party_size": 7}), 201)
     page.goto(ui.url("/"))
+    # the restaurant list may load asynchronously; wait for it before reading the option values
+    page.wait_for_function("() => { const s = document.querySelector('[data-testid=\"restaurant-select\"]');"
+                           " return !!s && Array.from(s.options).some(o => o.value === 'r_combo'); }",
+                           timeout=ui.WAIT)
     values = T(page, "restaurant-select").locator("option").evaluate_all("os => os.map(o => o.value)")
     assert {"r_combo", "r_anker"} <= set(values), values
     assert T(page, "party-size-input").get_attribute("type") == "number"

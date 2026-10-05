@@ -174,3 +174,218 @@ Every requirement of an earlier stage stays in force in every later stage folder
 - A-17 **Stage folders hold their own stage only.** `stage-1/` must not implement stage-2+ behaviour (the harness probes `stage-N/` with suite N+1 and a full pass there voids the stage). Designing the data model so later stages can extend it is encouraged.
 - A-19 **Fixture IDs over 64 characters**: the spec bounds fixtures to 64; the service may assume it. Rejecting a longer fixture ID with 422 `validation_failed` (state unchanged) is acceptable; it is not tested by the band.
 - A-18 **Isolated checks**: graded (isolated) evidence comes only from the WSL command in the task; native-Windows isolated runs prove nothing (they collect zero tests).
+
+---
+
+## Stage 2 — online booking and combined tables (spec: `stage-2.md`; all stage-1 lines stay in force)
+
+### 2.A Screens and routes
+
+- S2-001 [B,R] `GET /`, `/signup`, `/login`, `/lookup` each return an HTML page (text/html) reachable directly by URL; other screens are reachable through the UI. Stage-2 "Routes"
+- S2-002 [B,D] Every script, stylesheet, font and image the UI uses is served from the image (no CDN, no outbound fetch). Stage-1 §2, task constraints
+- S2-003 [B] Navigation is consistent across the four routes; `current-user` (text contains the display name) is visible on every screen while signed in; `logout-button` signs out. "Signup and login"
+- S2-004 [B] Signup (`signup-email`, `signup-password`, `signup-display-name`, `signup-submit`) and login (`login-email`, `login-password`, `login-submit`) work against the API; failures show `auth-error`, which is absent from the DOM when there is no error. "Signup and login"
+
+### 2.B Search and availability grid (`/`)
+
+- S2-005 [B] `restaurant-select` option values are restaurant ids; `date-input` value is `YYYY-MM-DD`; `party-size-input` is a number input; `search-button` runs the search; results live in `availability-grid`. "Search and availability grid"
+- S2-006 [B] One cell per table per slot with testid `slot-{table_id}-{HH:MM}` (local start time), carrying `data-available="true"` exactly when the table is in that slot's `available_table_ids` for the searched party size, otherwise `"false"`. "Search and availability grid"
+- S2-007 [B] A day with no slots shows `no-slots` instead of the grid. "Search and availability grid"
+- S2-008 [B] Clicking an available cell opens the booking form for that table/option and slot; clicking an unavailable cell does nothing; signed out, clicking an available cell shows `auth-error` or navigates to `/login`. "Search and availability grid"
+- S2-009 [B] Out-of-order responses: if search A starts before search B and finishes after it, the grid, table labels and booking form describe B; a late response never restores A. "Competing clients"
+- S2-010 [B] Combination cells `slot-{t_a}+{t_b}-{HH:MM}` (ids in `combinable` order) with `data-available` exactly as for single cells (true iff the pair is in that slot's `available_options`). (A-21.) "UI"
+
+### 2.C Booking form, confirmation, recovery
+
+- S2-011 [B] `booking-form` contains `booking-summary` (text names every table label of the selection and the local start time), `booking-party-size` (number input pre-filled from the search), `booking-submit`. "Booking form", "UI"
+- S2-012 [B] Success shows `confirmation` with `confirmation-reference` (text is exactly the reference), `confirmation-details` (restaurant name, table label, local start time) and `confirmation-tables` (every table label). "Confirmation", "UI"
+- S2-013 [B,R] The booking form stays on screen after success; resubmitting it unchanged returns the same `confirmation-reference` with no `booking-error` and no second booking (same Idempotency-Key and body → 200 replay); changing any field makes the next submission a new request with a new key. "Booking form", §7
+- S2-014 [B] `409 table_unavailable` on submit → `booking-error` shown, availability refreshed, the selected form and its inputs preserved, no confirmation for that attempt. "Competing clients"
+- S2-015 [B] A lost booking response (network failure, including after the server committed) → nonempty `booking-uncertain`, no `booking-error`, no new confirmation. "Competing clients"
+- S2-016 [B,R] Retrying the unchanged form after an uncertain outcome sends the same Idempotency-Key and body; a successful retry removes the uncertainty/error elements and shows the original reference; a confirmed rejection shows `booking-error`. "Competing clients"
+- S2-017 [B] The browser never manufactures a successful result from cached data; the server is authoritative. No polling, live updates, cross-tab sync or reload recovery is required. "Competing clients"
+- S2-018 [B] S2-014..S2-017 apply equally to combination bookings. "Competing clients", "UI"
+
+### 2.D Lookup (`/lookup`)
+
+- S2-019 [B] `lookup-reference-input` + `lookup-submit`; found → `reservation-detail` with `reservation-status` (text exactly `confirmed` or `cancelled`) and `reservation-tables` (every table label). "Lookup", "UI"
+- S2-020 [B] `reservation-cancel-button` cancels; it is absent from the DOM once the reservation is cancelled. "Lookup"
+- S2-021 [B] `reservation-error` shown when the reference is not found (or not the caller's) or when a cancel is refused (e.g. 409 `cutoff_passed`). "Lookup"
+
+### 2.E Product quality (judged on its own merits)
+
+- S2-022 [B] Coherent, presentation-ready, warm hospitality character; clear hierarchy for search → availability → booking; human-readable restaurant and table labels prominent; technical ids only where useful; combinations read as intentional seating options (e.g. "Tables 1 + 2 · seats 6"), not concatenated ids. "Product and visual direction"
+- S2-023 [B] Consistent visual system (type, spacing, colour, controls, feedback); obvious primary actions; visually distinct available, unavailable, selected, loading, successful, refused and uncertain states. "Product and visual direction"
+- S2-024 [B] No horizontal page scrolling at 375 CSS px and at desktop widths; required flows usable at both. "Product and visual direction"
+- S2-025 [B] Visible labels on inputs, visible keyboard focus, keyboard-operable grid cells and buttons, sufficient contrast; considered empty, loading and error states. "Product and visual direction"
+
+### 2.F Upgrade from stage 1
+
+- S2-026 [U] A stage-2 service imports an export produced by the team's stage-1 service (204) and serves all of its data: users/passwords, tokens, reservations, references, idempotency receipts and move receipts. "Existing clients after an upgrade"
+- S2-027 [U,B] A browser signed in before the export/import stays signed in afterwards without reload (its token still works). "Existing clients after an upgrade"
+- S2-028 [U,B] A retained booking reference still works through the lookup screen after the upgrade. "Existing clients after an upgrade"
+- S2-029 [U,B,R] A booking whose response was lost before export is retryable after import with the same key and body; the UI recovers the original confirmation; the form and its pending retry identity survive the upgrade without reload. "Existing clients after an upgrade"
+
+### 2.G Combined tables — model and API
+
+- S2-030 [R] Restaurant fixture gains `combinable`: list of unordered table-id pairs of that restaurant (default `[]` when absent); pairs only; not transitive. "Model"
+- S2-031 [R] Combination capacity = sum of the two tables' capacities. "Model"
+- S2-032 [R] Seeded reservations are confirmed unless `status: "cancelled"` (cancelled seeds occupy nothing) and may carry `table_id` or `table_ids`. "Model"
+- S2-033 [R] Availability slots gain `available_options`: every single table and every declared pair with capacity ≥ party_size and no overlapping confirmed reservation on any member; singles first in fixture order, then pairs in `combinable` order; pair `table_ids` in `combinable` order; each `{table_ids, capacity}`. `available_table_ids` is unchanged (singles only). "API / GET /availability"
+- S2-034 [R] `POST /reservations` accepts `table_ids` (array) instead of `table_id`; `table_id` still accepted as a set of one; both present → 422 `validation_failed`; neither → 422 `validation_failed`. "API / POST /reservations"
+- S2-035 [R] Every reservation response carries `table_ids` (in `combinable` order for a pair); it carries `table_id` only when the set has exactly one member and omits it otherwise. This applies to create, GET, list, cancel, PATCH, moves, replays. "API / POST /reservations"
+- S2-036 [R] Pair not declared in `combinable` (either order) → 422 `combination_not_allowed`; more than two tables → 422 `combination_not_allowed`; duplicate table id → 422 `validation_failed`; empty `table_ids` → 422 `validation_failed`; non-array or non-string members → 400 `malformed_request`. "API / POST /reservations", §5
+- S2-037 [R,C] Any member taken for an overlapping interval → 409 `table_unavailable`; a pair booking occupies both tables for the full duration (each member then shows unavailable as a single and in every pair containing it). "API", "Combined tables"
+- S2-038 [R] party_size > the pair's summed capacity → 422 `party_exceeds_capacity`. "API"
+- S2-039 [R,P] `PATCH` accepts `table_ids` under the same rules (single ↔ pair changes allowed); cancelling frees every table in the set. "API"
+- S2-040 [R,P] `POST /reservation-moves` items accept `table_ids`; no table may belong to overlapping resulting bookings; all stage-1 move rules apply. "UI" (last paragraph)
+- S2-041 [C] Concurrent bookings, amendments, cancels and moves produce results equal to some serial order, and every invariant holds at every read. "Concurrent bookings and amendments"
+- S2-042 [U] Stage-2 export → stage-2 import round-trips combined bookings, `combinable` and every stage-1 item (S1-085..S1-092).
+
+### Stage 2 ambiguities and chosen readings
+
+- A-20 **Table-set validation precedence** (create/PATCH/move item): 400 wrong JSON type → 422 both/neither of `table_id`/`table_ids`, empty set, duplicate id → 404 unknown table or table of another restaurant → 422 `combination_not_allowed` (more than two, or undeclared pair) → then stage-1 order from `invalid_local_time` onwards (capacity uses the summed capacity). Why: shape errors first, resources next, rules last, occupancy always last (A-02).
+- A-21 **Combination cells**: render a cell for every declared pair at every slot, `data-available` true exactly when the pair is in that slot's `available_options` for the searched party size, false otherwise. Why: "carries `data-available` like a single cell" implies both values occur; this reading also satisfies "shown when a declared pair is available".
+- A-22 **Pair order**: a pair given in reversed order names the same set; stored and returned in `combinable` order. (Stage 3 states this explicitly; adopted from stage 2 on.)
+- A-23 **Export format**: `format_version` stays 1 (stage 1 fixes it); the opaque `state` may carry an internal schema version; stage-2 import must accept both the stage-1 and the stage-2 state shapes.
+- A-24 **Lookup while signed out**: lookup uses the owner-only API, so a signed-out lookup shows `reservation-error` or `auth-error` with a sign-in link; a reference of another user shows `reservation-error` (no leak).
+- A-25 **Retry identity**: the idempotency key is created when the booking form is opened or any of its fields changes, kept in page memory (not storage), and reused for every unchanged resubmission, including after an import between requests. Signed-in token may be kept in localStorage.
+- A-26 **"Present only when there is one"** for `auth-error`, `booking-error`, `booking-uncertain`, `reservation-error`: the element is removed from the DOM (not merely hidden) when there is nothing to show.
+
+---
+
+## Stage 3 — booking policies, history and recurring reservations (spec: `stage-3.md`; all stage-1 and stage-2 lines stay in force)
+
+### 3.A Availability explanations
+
+- S3-001 [R] `explain` is optional; its only accepted value is `true`; any other value (`false`, `1`, `TRUE`, empty string) → 422 `validation_failed`. "Availability explanations"
+- S3-002 [R] Without `explain` the response has no explanation fields (stage-1 shape plus stage-2 `available_options`). "Availability explanations"
+- S3-003 [R] With `explain=true` every slot carries `explain`: every table of the restaurant exactly once, in fixture order, each `{table_id, policy_version, available, rules:[{rule:"capacity",holds}, {rule:"no_overlap",holds}]}` — both rules always present in that order. "Availability explanations" 1–2
+- S3-004 [R] `available` is true exactly when both rules hold; the `table_id`s with `available: true` equal `available_table_ids` in the same order; a table failing both reports both false. "Availability explanations" 2–3
+- S3-005 [R] Closed day → `"slots": []`; a slot with no available table still appears with a full `explain`. "Availability explanations" 4
+- S3-006 [R] `capacity` uses the selected policy's capacity for that date; `policy_version` names the policy selected for the slot's local date (0 = fixture). "Policies and accepted terms"
+
+### 3.B Reservation history
+
+- S3-007 [R] `GET /reservations/{reference}/history` → 200 `{reference, entries:[...]}` for the owner only; anyone else, signed in or not (no token at all included), → 404 `not_found`. A cancelled reservation still has its history. "Reservation history", "Policies" last paragraph
+- S3-008 [R] Each entry: `seq`, `at` (RFC 3339 with offset), `event`, `changes`, `revision`, `accepted_terms`. `seq` starts at 1 and increases by exactly 1; entries are in `seq` order, which is also `at` order (non-decreasing). "Reservation history" 1
+- S3-009 [R] `created` names all three fields with `"from": null`, in the order `table_id` (or `table_ids` for a pair, S3-047), `starts_at_local`, `party_size`. "Reservation history" 2
+- S3-010 [R] `changed` names only fields that actually changed, in the order `table_id`/`table_ids`, `starts_at_local`, `party_size`, with real `from`/`to` values; a PATCH that changes nothing succeeds and records no entry. "Reservation history" 3
+- S3-011 [R] `cancelled` carries `changes: []` and nothing follows it. "Reservation history" 4
+- S3-012 [R] An idempotent replay records nothing. "Reservation history" 5
+- S3-013 [R] History entries carry the reservation's resulting `revision` and complete `accepted_terms` at that point; old entries never acquire newer terms. "Policies and accepted terms"
+
+### 3.C Policies and accepted terms
+
+- S3-014 [R] Fixture restaurants may carry `manager_user_ids` (default `[]`); only those users may publish policies. "Policies and accepted terms"
+- S3-015 [R] `POST /restaurants/{id}/policies`: no token → 401; unknown restaurant → 404; authenticated non-manager → 403 `forbidden`; Idempotency-Key required with all stage-1 §7 rules (400 missing, 422 length, 200 replay, 409 reuse, 4xx keys reusable). "Policies and accepted terms"
+- S3-016 [R] Body is a complete policy: `effective_from` (real `YYYY-MM-DD`), `slot_minutes` and `reservation_duration_minutes` integers 1..1440, `cancellation_cutoff_minutes` integer 0..10080, `opening_hours` per stage-1 rules with no duplicate weekday, `capacities` naming exactly the restaurant's table ids with integers 1..100. Booleans are not integers. Any violation (missing field, wrong type, out of range, extra or missing table id, unknown table id, duplicate weekday, closes ≤ opens, bad HH:MM, bad weekday) → 422 `validation_failed` with no version or state change. Unknown fields ignored. (A-28.) "Policies and accepted terms"
+- S3-017 [R,P] Success → 201 with the supplied policy fields plus `policy_version` = 1, 2, 3… per restaurant (independent per restaurant). Failed writes and replays allocate no version. "Policies and accepted terms"
+- S3-018 [R] Policies are immutable; table ids, labels, timezone and declared combinations cannot be changed by a policy. "Policies and accepted terms"
+- S3-019 [R] `GET /restaurants/{id}/policies` is public → `{"policies":[...]}` in publication order, omitting policy 0 (empty list when none); unknown restaurant → 404. "Policies and accepted terms"
+- S3-020 [R] `GET /restaurants/{id}` keeps returning the original fixture configuration after publications. "Policies and accepted terms"
+- S3-021 [R,T] Selection: for a booking's (or slot's) local start date choose the policy with the greatest `effective_from` ≤ that date; ties → greatest `policy_version`; policy 0 (fixture rules) applies when none qualifies. Publication order may differ from effective-date order; effective dates may be in the past. "Policies and accepted terms"
+- S3-022 [R] Availability (slot grid, opening hours, duration, capacities) and booking decisions (create, PATCH, moves, series occurrences) use the selected policy for the relevant local date, not the restaurant detail. "Policies and accepted terms"
+- S3-023 [R] Every reservation response carries `revision` (1 at creation) and `accepted_terms` = `{policy_version, slot_minutes, reservation_duration_minutes, cancellation_cutoff_minutes, opening_hours, capacities}` — the whole selected policy except `effective_from`. "Policies and accepted terms"
+- S3-024 [R] Seeded bookings start at revision 1 under policy 0. Replays of old idempotency keys return the original response, including its original revision and terms (or its original pre-stage-3 shape). "Policies and accepted terms"
+- S3-025 [R,P] Publishing a policy never changes existing bookings, their `ends_at`, terms, revisions or history (also for past effective dates). "Policies and accepted terms"
+- S3-026 [R,T] Cancel checks the booking's **accepted** cutoff against its current start; cancel increments revision once; a repeated cancel changes nothing. "Policies and accepted terms"
+- S3-027 [R,P] A real amendment checks the **old accepted** cutoff first, then validates all resulting fields against the policy for the resulting start date; on success it atomically replaces accepted terms and `ends_at` and increments revision exactly once. "Policies and accepted terms"
+- S3-028 [R,P] A no-op amendment (all supplied values equal the current ones, including a reversed pair) keeps terms, `ends_at`, revision and records no history, but still requires a confirmed booking outside its cutoff (409 `reservation_cancelled` / `cutoff_passed`). "Policies and accepted terms"
+- S3-029 [R,P] A failed amendment changes nothing (revision, terms, history, occupancy). "Policies and accepted terms"
+- S3-030 [R] PATCH optionally takes `expected_revision`: a positive integer different from the current revision → 409 `stale_revision`, checked before cutoff and validation; wrong type or range (0, negative, boolean, string, fraction, null) → 422 `validation_failed`; omitted → stage-1 behaviour. "Policies and accepted terms"
+- S3-031 [C] Two concurrent amendments carrying the same `expected_revision`: at most one makes a real change; the other gets 409 `stale_revision` (or is a no-op). "Policies and accepted terms"
+- S3-032 [R] `GET /reservations/{reference}/decision` → `{reference, revision, accepted_terms}` for the current booking, also after cancellation; owner-only, everyone else (including no token) → 404 `not_found`. "Policies and accepted terms"
+- S3-033 [R] Managers gain no access to other diners' reservations, lookup, history or decision. "Policies and accepted terms"
+
+### 3.D Recurring reservations (series)
+
+- S3-034 [R] `POST /series` requires auth (401) and an Idempotency-Key (§7 rules). Body `{anchor_reference, count, interval_weeks}`; `count` integer 2..12, `interval_weeks` integer 1..4; invalid values including booleans, strings, fractions, missing → 422 `validation_failed`; unknown fields ignored. "Recurring reservations"
+- S3-035 [R] Anchor unknown or another owner's → 404; cancelled → 409 `reservation_cancelled`; already adopted (anchor of a series or any occurrence of one) → 409 `already_in_series`; within its accepted cutoff → 409 `cutoff_passed`. "Recurring reservations"
+- S3-036 [R,P] Occurrence 0 is the anchor itself, unchanged: reference, id, revision, terms, history, timestamps and its original idempotent response. "Recurring reservations"
+- S3-037 [R,T] Occurrence i (1..count−1) starts on the anchor's local calendar date + i × interval_weeks × 7 days at the same local clock time, with the anchor's party size and table selection (single or pair). "Recurring reservations"
+- S3-038 [R,T] Each generated occurrence selects its own date's policy (duration, grid, hours, capacity) and obeys opening hours, DST and occupancy; a nonexistent local time rejects the whole adoption with 422 `invalid_local_time`; a repeated time resolves to the first occurrence. "Recurring reservations"
+- S3-039 [R,P] All-or-nothing: on any failure no series, reservation, history, counter or idempotency claim survives; the first failing occurrence in index order determines the ordinary booking error code. "Recurring reservations"
+- S3-040 [R] 201 `{series_id, revision: 1, interval_weeks, occurrences:[{index, reference, exception:false, reservation:{ordinary reservation response}}]}` — all `count` occurrences in index order, each with a distinct reference. "Recurring reservations"
+- S3-041 [R,P] Generated occurrences are ordinary reservations: listed in `GET /reservations`, occupy tables, have ordinary histories (a `created` entry), revisions and terms; references and indices never change when dates or tables change. "Recurring reservations"
+- S3-042 [R] `GET /series/{series_id}` → the same shape with current reservation states and exception flags; another user or no token → 404 `not_found`. "Recurring reservations"
+- S3-043 [R,P] A real individual PATCH of an occurrence permanently sets its `exception: true` and increments the series revision once; a no-op or failed PATCH changes neither. "Recurring reservations"
+- S3-044 [R,P] Cancelling an occurrence increments the series revision once and keeps the occurrence in the series with its exception flag unchanged; a repeated cancel changes nothing; cancelling the anchor does not cancel its siblings. "Recurring reservations"
+- S3-045 [R,P] Replays of `POST /series` return the original response (200) even after later changes and change no counter; adoption increments the restaurant revision once. "Recurring reservations"
+- S3-046 [U] A stage-3 service imports exports from the team's stage-1 and stage-2 services; adoption works on imported reservations; confirmation links, sessions and original booking retries remain valid. "Recurring reservations" last paragraph
+
+### 3.E Combined-table history and collective moves
+
+- S3-047 [R] History: single-to-single operations use `table_id`; creating a pair uses `table_ids` (null → pair); any change involving a pair uses `table_ids` with complete before/after lists; table-set order is the declared combination order; a reversed input pair is the same set and is not an amendment on its own. Combination capacity in terms = sum of the **selected policy's** capacities. "Combined-table history"
+- S3-048 [R,P] `POST /reservation-moves`: each real change checks the old accepted cutoff, then adopts the resulting date's policy; optional per-move `expected_revision` with PATCH validation and `stale_revision` rules; no-ops keep terms and history. "Collective moves"
+- S3-049 [R,P] On success every changed booking gains exactly one revision and one `changed` history entry; the restaurant revision increases once per batch; each affected series revision increases once; each changed series occurrence becomes a permanent exception. "Collective moves"
+- S3-050 [R,P] A failed batch or a replay changes no revisions, histories or exception flags. "Collective moves"
+- S3-051 [U] Stage-3 export → import round-trips policies, versions, revisions, terms, histories, series (ids, revisions, exception flags), restaurant revisions and all receipts.
+
+### Stage 3 ambiguities and chosen readings
+
+- A-27 **Policy endpoint precedence**: 401 → 400 unparseable/non-object body → 400 missing key / 422 key length → idempotency resolution → 404 unknown restaurant → 403 non-manager → 422 policy validation. Why: §7 resolves idempotency before resource checks; a non-manager can never hold a successful key on that path, so 403 is unaffected in practice.
+- A-28 **Wrong JSON types inside a policy, series or series-amend body** → 422 `validation_failed` (not 400). Why: "Invalid policy is 422", "Invalid values, including booleans, give 422" and "invalid type/range gives 422" are endpoint-specific and override §5's 400 rule; only an unparseable or non-object body is 400.
+- A-29 **PATCH precedence (extends A-04)**: 401 → 400 body → 404 → 400 wrong type of table/time fields → 422 invalid `expected_revision` → 409 `stale_revision` → 409 `reservation_cancelled` → 409 `cutoff_passed` (old accepted cutoff) → resulting-field validation against the resulting date's policy → 409 `table_unavailable`.
+- A-30 **Series precedence**: 401 → 400 body → key / idempotency → 422 body (`anchor_reference` missing/non-string, count, interval_weeks) → 404 anchor → 409 `reservation_cancelled` → 409 `already_in_series` → 409 `cutoff_passed` → occurrences 1..count−1 in index order, each with the A-02/A-20 order.
+- A-31 **Imported pre-stage-3 bookings**: revision 1 and policy-0 terms (the restaurant's fixture rules); history synthesised as a `created` entry (at `created_at`, current fields) plus a `cancelled` entry (revision 2) when the booking is cancelled. Pre-stage-3 receipts replay with their original stage-1/2 bodies.
+- A-32 **Restaurant revision** (observable from stage 4) is tracked from stage 3 on: +1 per successful new booking (including each adoption as a whole), real amendment, cancellation, policy publication, batch move; never for no-ops, failures or replays; exported and imported with the state.
+- A-33 **Series revision events**: +1 for a real individual PATCH of an occurrence, +1 for a (first) cancel of an occurrence, +1 per successful batch move touching the series' occurrences with a real change.
+- A-34 **Policy response** echoes the supplied policy's known fields (`effective_from`, `slot_minutes`, `reservation_duration_minutes`, `cancellation_cutoff_minutes`, `opening_hours`, `capacities`) plus `policy_version`; the list endpoint returns the same objects.
+
+---
+
+## Stage 4 — seating changes and recurring amendments (spec: `stage-4.md`; all stage 1–3 lines stay in force)
+
+### 4.A Replan preview
+
+- S4-001 [R] `POST /restaurants/{id}/replans`: no token → 401; unknown restaurant → 404; non-manager → 403 `forbidden`; Idempotency-Key required with §7 rules (replay 200 original, reuse 409, 4xx keys reusable). "Seating changes"
+- S4-002 [R] Body `{table_id, from, to}`: `from`/`to` are RFC 3339 instants with explicit offsets and `from < to`; missing, unparseable, offset-less, or `from ≥ to` → 422 `validation_failed`; unknown table (or another restaurant's) → 404 `not_found`. "Seating changes"
+- S4-003 [R] The proposed closure is `[from, to)`. Considered bookings = every confirmed booking at this restaurant whose occupancy overlaps that interval, on any table; all other bookings are fixed. (A-35.) "Seating changes"
+- S4-004 [R] Planning supports at least 6 tables, 4 declared pairs and 6 considered bookings; larger inputs may return 422 `planning_limit`. "Seating changes"
+- S4-005 [R] Each considered booking keeps reference, owner, party size, start, end and accepted terms and is assigned one single table or one declared pair whose capacity under **its own accepted terms** ≥ party size, with no conflict against fixed bookings, other assignments, previously applied closures or the proposed closure. Cutoffs do not prevent a repair; no booking disappears or is cancelled. "Seating changes"
+- S4-006 [R] Among feasible plans choose the lexicographic minimum of: (1) number of bookings whose table set changes; (2) total unused seats (assigned capacity − party size, summed); (3) the vector of option ranks taken in ascending reservation-reference order, where singles are ranked first in fixture order, then pairs in declared order, from 0. "Seating changes"
+- S4-007 [R] 201 `{plan_id, restaurant_revision, closure:{table_id, from, to}, assignments:[{reference, table_ids, changed}], moved_count, unused_seats}` with every considered booking in ascending reference order; `restaurant_revision` is the current restaurant revision. "Seating changes"
+- S4-008 [R,P] Preview stores only the plan: no closure, occupancy, reservation revision, history or restaurant revision change. "Seating changes"
+- S4-009 [R,P] No feasible plan → 409 `no_feasible_plan`, nothing stored or changed. "Seating changes"
+
+### 4.B Restaurant revision
+
+- S4-010 [R,P] Restaurant revision starts at 0 after reset and increments exactly once per successful new booking (create; a series adoption counts once), real amendment (PATCH; a batch move counts once; a series amend counts once), cancellation, policy publication, or plan application. No-op writes, failures, previews and replays never increment it. "Seating changes", stage-3 "Recurring reservations"
+
+### 4.C Plan application
+
+- S4-011 [R] `POST /restaurants/{id}/replans/{plan_id}/apply` with body `{}`: manager only (401/404/403 as S4-001) and Idempotency-Key required. "Seating changes"
+- S4-012 [R] Unknown plan, or a plan of another restaurant → 404 `not_found`. "Seating changes"
+- S4-013 [R,P] Any restaurant revision change since the preview → 409 `stale_plan`, nothing changed. A closure applied at another restaurant does not invalidate the plan. "Seating changes"
+- S4-014 [R] A plan already applied under a different key → 409 `plan_already_applied`; replay of the successful key → 200 with the original response, even after later changes. "Seating changes"
+- S4-015 [R] Success → 201 `{plan_id, restaurant_revision (new value), reservations:[...]}` with every considered booking in ascending reference order, in ordinary reservation shape. "Seating changes"
+- S4-016 [R,P,C] Application is atomic: closure and all assignments are recorded together; concurrent applications never leave partially moved bookings. "Seating changes"
+- S4-017 [R,P] Each moved booking: revision +1 once and exactly one `reassigned` history entry carrying a `table_ids` change (complete before/after lists) and the `plan_id`; accepted terms, `starts_at`, `ends_at` unchanged. Unmoved bookings gain nothing. Restaurant revision +1 once for the whole plan. "Seating changes"
+- S4-018 [R,P] After application the closure removes the table (as a single and in every pair containing it) from availability for overlapping slots, creates and amendments overlapping it get 409 `table_unavailable`, and explanations report `no_overlap: false` for it. "Seating changes"
+- S4-019 [R,P] Moved series occurrences keep their exception flags, scheduled dates, identities and accepted terms; each affected series revision +1 once per application if at least one member moved. "Amend recurring reservations"
+- S4-020 [B] Existing availability, confirmation and lookup screens reflect an applied plan (new tables shown). "Seating changes"
+
+### 4.D Series amendment
+
+- S4-021 [R] `POST /series/{series_id}/amend`: owner only (unknown or other owner's series → 404; no token → 401); Idempotency-Key required with §7 rules. "Amend recurring reservations"
+- S4-022 [R] Body `{expected_revision, from_index, local_time}`: `expected_revision` positive integer, `from_index` integer 0..count−1, `local_time` exactly `HH:MM` in 00:00..23:59; booleans, strings for integers, fractions, missing fields → 422 `validation_failed`; unknown fields ignored. "Amend recurring reservations"
+- S4-023 [R] Series revision ≠ `expected_revision` → 409 `stale_revision`, before any occurrence's cutoff or booking validation. "Amend recurring reservations"
+- S4-024 [R,T] Eligible = occurrences with index ≥ `from_index` that are neither cancelled nor exceptions. Each moves to `local_time` on its original scheduled local date, keeping reference, owner, party size and current table selection (including a replan-moved table set). "Amend recurring reservations"
+- S4-025 [R] An occurrence whose resulting fields are identical is a no-op (keeps terms, revision, history). Each real change checks its old accepted cutoff, then adopts the policy for its resulting start date, exactly like an individual PATCH (DST gap → `invalid_local_time`, grid, hours, capacity). "Amend recurring reservations"
+- S4-026 [R,P] Resulting occurrences must not conflict with unchanged occurrences, other bookings or applied closures; non-occupancy errors take precedence in occurrence-index order; otherwise an occupancy conflict → 409 `table_unavailable`. On failure no history, idempotency record or revision changes. "Amend recurring reservations"
+- S4-027 [R,P] Success → 201 with the current series response; each changed occurrence gains exactly one `changed` history entry and one reservation revision; series revision and restaurant revision each +1 once if anything changed; no exception flags are set. All-no-op or empty eligible set → success with no revision change. "Amend recurring reservations"
+- S4-028 [R] Replay → 200 with the original response, even after later edits or cancellations. "Amend recurring reservations"
+- S4-029 [C] Concurrent amendments from the same `expected_revision` cannot both make a real change. "Amend recurring reservations"
+- S4-030 [U] A stage-4 service imports exports from the team's stages 1–3; replans and series amendments work on imported data, including imported series with moved and cancelled occurrences; earlier booking and series receipts, histories and retries remain valid. Stage-4 export → import round-trips plans, closures, applied-plan receipts and series amend receipts. "Amend recurring reservations" last paragraph
+
+### Stage 4 ambiguities and chosen readings
+
+- A-35 **Considered bookings** are all confirmed bookings at the restaurant overlapping `[from,to)` in time, on any table (a booking on another table may stay, `changed: false`, or move if that lowers the objective). Why: "Consider every confirmed booking at this restaurant overlapping that interval. Other bookings retain their assignments."
+- A-36 **Replan precedence**: 401 → 400 body → key / idempotency → 404 restaurant → 403 → 422 body (`table_id` missing/non-string, interval invalid) → 404 unknown table → 422 `planning_limit` → 409 `no_feasible_plan`.
+- A-37 **Apply precedence**: 401 → 400 body → key / idempotency (replay 200) → 404 restaurant → 403 → 404 plan → 409 `plan_already_applied` → 409 `stale_plan`.
+- A-38 **Empty plan** (no considered bookings): feasible; 201 with `assignments: []`, `moved_count: 0`, `unused_seats: 0`; applying it records the closure and increments the restaurant revision once.
+- A-39 **Closure echo**: `closure.from`/`closure.to` are returned as RFC 3339 instants equal to the supplied instants (the supplied strings are acceptable).
+- A-40 **Series amend precedence**: 401 → 400 body → key / idempotency → 404 series → 422 body → 409 `stale_revision` → per eligible occurrence in index order: old accepted cutoff (409 `cutoff_passed`) then resulting-field validation (non-occupancy codes) → occupancy over the whole resulting set (409 `table_unavailable`).
+- A-41 **Scheduled date** of occurrence i = anchor local date + i × interval_weeks × 7 days (the anchor's original date at adoption); `local_time` must still exist on that date and satisfy the selected policy.
+- A-42 **Reassigned entry shape**: `{seq, at, event:"reassigned", changes:[{field:"table_ids", from:[...], to:[...]}], plan_id, revision, accepted_terms}`; `table_ids` is used even for single→single repairs.

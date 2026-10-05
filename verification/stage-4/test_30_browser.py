@@ -600,3 +600,47 @@ def test_restaurant_select_holds_only_ids_at_load(uw, browser):
             ctx.close()
         assert set(values) == ids and len(values) == len(ids), \
             f"load {i + 1}: restaurant-select options at load are {values!r}, expected exactly {sorted(ids)}"
+
+
+@pytest.mark.ledger("S2-005", "A-46")
+def test_restaurant_select_ids_at_load_without_client_fetch(uw, browser):
+    """Tuned after Gate's fault probe on a87d4d1 (not first-time detection): with the client's
+    GET /restaurants held back, the options at the load event must still be exactly the ids."""
+    from urllib.parse import urlparse
+    ids = {r["id"] for r in uw.fx["restaurants"]}
+    ctx, page = _page(browser)
+    held = []
+    try:
+        page.route(lambda u: urlparse(u).path.rstrip("/") == "/restaurants", lambda route: held.append(route))
+        page.goto(ui.url("/"), wait_until="load")
+        values = T(page, "restaurant-select").locator("option").evaluate_all("os => os.map(o => o.value)")
+        assert set(values) == ids and len(values) == len(ids), \
+            f"options at load with GET /restaurants held back: {values!r}, expected exactly {sorted(ids)}"
+    finally:
+        for r in held:
+            try:
+                r.abort()
+            except Exception:
+                pass
+        ctx.close()
+
+
+@pytest.mark.ledger("S2-005", "A-46", "S2-022")
+def test_hostile_restaurant_name_renders_as_text(api, browser):
+    """Tuned after Gate's fault probe on a87d4d1: the embedded restaurant list must not allow markup
+    injection; the name is shown literally."""
+    evil = '</script><img src=x id="tk-injected" onerror="window.__tkxss=1">'
+    rest = {**COMBO, "name": evil}
+    tk.World(api, tk.fixture(restaurants=(rest, tk.ANKER)))
+    ctx, page = _page(browser)
+    try:
+        page.goto(ui.url("/"), wait_until="load")
+        page.wait_for_timeout(500)
+        assert page.evaluate("() => window.__tkxss === undefined"), "a restaurant name executed script"
+        assert page.locator("#tk-injected").count() == 0, "a restaurant name injected an element"
+        texts = T(page, "restaurant-select").locator("option").evaluate_all("os => os.map(o => o.textContent)")
+        assert any(evil in t for t in texts), f"the name is not rendered literally: {texts!r}"
+        values = T(page, "restaurant-select").locator("option").evaluate_all("os => os.map(o => o.value)")
+        assert set(values) == {"r_combo", "r_anker"}
+    finally:
+        ctx.close()

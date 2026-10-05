@@ -14,7 +14,7 @@ SOURCES = [("stage1", os.environ.get("TK_STAGE1_BASE_URL", "").rstrip("/")),
            ("stage2", os.environ.get("TK_STAGE2_BASE_URL", "").rstrip("/"))]
 
 
-@pytest.mark.ledger("S3-046", "A-31", "S3-024", "S2-026", "S1-088")
+@pytest.mark.ledger("S3-046", "A-31", "S3-024", "S2-026", "S1-088", "S4-030")
 @pytest.mark.parametrize("name,url", SOURCES, ids=[s[0] for s in SOURCES])
 def test_import_older_export_then_adopt(api, name, url):
     if not url:
@@ -51,7 +51,10 @@ def test_import_older_export_then_adopt(api, name, url):
     assert c["status"] == "cancelled"
     ec = api.entries(ada, o2["reference"])
     assert [e["event"] for e in ec] == ["created", "cancelled"] and ec[-1]["changes"] == []
-    assert c["revision"] == ec[-1]["revision"]
+    # A-31 (tuned after Gate's fault probe on 0720c48): imported cancelled booking -> created (rev 1),
+    # cancelled (rev 2), current revision 2
+    assert [e["revision"] for e in ec] == [1, 2], ec
+    assert c["revision"] == 2, c
     # adoption works on an imported reservation
     s = api.series(ada, {"anchor_reference": o1["reference"], "count": 3, "interval_weeks": 1})
     expect(s, 201)

@@ -139,6 +139,23 @@ def test_capacity_under_each_bookings_own_accepted_terms(api):
     check_plan(r, cons, orc, "r_3", f, t)
 
 
+@pytest.mark.ledger("S4-005", "S4-006", "S3-023")
+def test_planner_uses_accepted_capacities_that_differ_from_fixture(api):
+    """Tuned after Gate's stage-4 fault probe M62 (not first-time detection): the policy shrinks r_4 and
+    r_6 BEFORE the booking is made, so the booking's accepted capacities differ from the fixture.
+    Under its own terms r_4 (2) cannot seat 3; r_6 (4) leaves 1 seat and outranks the r_1+r_2 pair.
+    A planner using fixture capacities would pick r_4 (fixture 4)."""
+    w = world(api, [])
+    caps = {"r_1": 2, "r_2": 2, "r_3": 4, "r_4": 2, "r_5": 6, "r_6": 4}
+    pol = tk.policy(D, slot=30, dur=120, hours=REP["opening_hours"], caps=caps)
+    expect(api.publish(w.mgr, "r_rep", pol), 201)
+    a = api.book(w.ada, "r_rep", "r_3", f"{D}T19:00", 3)
+    assert a["accepted_terms"]["capacities"] == caps
+    r, cons, orc, f, t = preview(api, w, "r_3", f"{D}T18:00", f"{D}T21:00")
+    assert orc[0] == {a["reference"]: ("r_6",)}
+    check_plan(r, cons, orc, "r_3", f, t)
+
+
 @pytest.mark.ledger("S4-009", "S4-008")
 def test_no_feasible_plan_changes_nothing(api):
     # RA0001 seats 8: r_6 is being closed and r_3+r_4 is blocked by the fixed RX0009 (20:00, outside the window)

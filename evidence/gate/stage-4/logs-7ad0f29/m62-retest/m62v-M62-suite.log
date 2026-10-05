@@ -1,0 +1,56 @@
+F.                                                                       [100%]
+================================== FAILURES ===================================
+_______ test_planner_uses_accepted_capacities_that_differ_from_fixture ________
+
+api = <tk.Api object at 0x00000214754B6510>
+
+    @pytest.mark.ledger("S4-005", "S4-006", "S3-023")
+    def test_planner_uses_accepted_capacities_that_differ_from_fixture(api):
+        """Tuned after Gate's stage-4 fault probe M62 (not first-time detection): the policy shrinks r_4 and
+        r_6 BEFORE the booking is made, so the booking's accepted capacities differ from the fixture.
+        Under its own terms r_4 (2) cannot seat 3; r_6 (4) leaves 1 seat and outranks the r_1+r_2 pair.
+        A planner using fixture capacities would pick r_4 (fixture 4)."""
+        w = world(api, [])
+        caps = {"r_1": 2, "r_2": 2, "r_3": 4, "r_4": 2, "r_5": 6, "r_6": 4}
+        pol = tk.policy(D, slot=30, dur=120, hours=REP["opening_hours"], caps=caps)
+        expect(api.publish(w.mgr, "r_rep", pol), 201)
+        a = api.book(w.ada, "r_rep", "r_3", f"{D}T19:00", 3)
+        assert a["accepted_terms"]["capacities"] == caps
+        r, cons, orc, f, t = preview(api, w, "r_3", f"{D}T18:00", f"{D}T21:00")
+        assert orc[0] == {a["reference"]: ("r_6",)}
+>       check_plan(r, cons, orc, "r_3", f, t)
+
+test_50_replan.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+resp = <POST http://127.0.0.1:18362/restaurants/r_rep/replans -> 201 '{"plan_id":"plan_1","restaurant_revision":2,"closure":{...02:00"},"assignments":[{"reference":"0FGXCOZ1","table_ids":["r_4"],"changed":true}],"moved_count":1,"unused_seats":1}'>
+considered = [{'caps': {'r_1': 2, 'r_2': 2, 'r_3': 4, 'r_4': 2, ...}, 'end': datetime.datetime(2027, 6, 17, 21, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200))), 'party': 3, 'reference': '0FGXCOZ1', ...}]
+oracle = ({'0FGXCOZ1': ('r_6',)}, (1, 1, (5,))), table_id = 'r_3'
+frm = '2027-06-17T18:00:00+02:00', to = '2027-06-17T21:00:00+02:00'
+
+    def check_plan(resp, considered, oracle, table_id, frm, to):
+        best, obj = oracle
+        expect(resp, 201)
+        j = resp.json
+        assert isinstance(j["plan_id"], str) and 1 <= len(j["plan_id"]) <= 64
+        assert type(j["restaurant_revision"]) is int
+        c = j["closure"]
+        assert c["table_id"] == table_id
+        assert tk.parse_ts(c["from"]) == tk.parse_ts(frm) and tk.parse_ts(c["to"]) == tk.parse_ts(to), c  # A-39
+        refs = sorted(b["reference"] for b in considered)
+        assert [a["reference"] for a in j["assignments"]] == refs, "assignments: every considered booking, reference order"
+        cur = {b["reference"]: b for b in considered}
+        want = {ref: list(opt) for ref, opt in best.items()}
+        got = {a["reference"]: a["table_ids"] for a in j["assignments"]}
+>       assert got == want, f"plan is not the optimum: got {got}, expected {want} (objective {obj})"
+E       AssertionError: plan is not the optimum: got {'0FGXCOZ1': ['r_4']}, expected {'0FGXCOZ1': ['r_6']} (objective (1, 1, (5,)))
+E       assert {'0FGXCOZ1': ['r_4']} == {'0FGXCOZ1': ['r_6']}
+E         
+E         Differing items:
+E         {'0FGXCOZ1': ['r_4']} != {'0FGXCOZ1': ['r_6']}
+E         Use -v to get more diff
+
+test_50_replan.py:79: AssertionError
+=========================== short test summary info ===========================
+FAILED test_50_replan.py::test_planner_uses_accepted_capacities_that_differ_from_fixture
+1 failed, 1 passed in 1.79s

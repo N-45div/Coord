@@ -199,7 +199,8 @@ def expect_no_5xx(r):
 RFC3339 = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$")
 REF_RE = re.compile(r"^[A-Z0-9]{6,12}$")
 LOCAL_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$")
-RES_KEYS = {"reservation_id", "reference", "restaurant_id", "table_id", "party_size", "status",
+# stage 2: table_id is present only for single-table sets (checked in assert_res), so it is not required here
+RES_KEYS = {"reservation_id", "reference", "restaurant_id", "party_size", "status",
             "starts_at_local", "starts_at", "ends_at", "created_at"}
 
 

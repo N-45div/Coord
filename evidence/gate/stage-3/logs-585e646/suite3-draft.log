@@ -1,0 +1,34 @@
+........................................................................ [ 68%]
+..F..............................                                        [100%]
+================================== FAILURES ===================================
+____________ test_first_failing_occurrence_in_index_order_decides _____________
+
+sw = <tk.World object at 0x0000024D2ECD2930>
+api = <tk.Api object at 0x0000024D2D10D5E0>
+
+    @pytest.mark.ledger("S3-039", "A-30")
+    def test_first_failing_occurrence_in_index_order_decides(sw, api):
+        m = sw.tok("u_mgr")
+        api.book(sw.bob, "r_pol", "p_2", "2027-06-24T19:00", 2)                     # occurrence 1: occupied
+        early = [{"weekday": d, "opens": "12:00", "closes": "18:00"} for d in tk.ALL_DAYS]
+        expect(api.publish(m, "r_pol", tk.policy("2027-07-01", hours=early)), 201)  # occurrence 2: closed at 19:00
+>       expect(api.series(sw.ada, sbody(sw.anchor["reference"])), 409, "table_unavailable")
+
+test_43_series.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+r = <POST http://127.0.0.1:18394/series -> 422 '{"error":{"code":"outside_opening_hours","message":"the booking is outside opening hours"}}'>
+status = 409, code = 'table_unavailable'
+
+    def expect(r, status, code=None):
+        want = f"{status} {code}" if code else f"{status}"
+        if status >= 400 and code is not None and r.status == status:
+            assert_error_body(r)
+            assert r.json["error"]["code"] == code, f"expected {want}, got {r!r}"
+>       assert r.status == status, f"expected {want}, got {r!r}"
+E       AssertionError: expected 409 table_unavailable, got <POST http://127.0.0.1:18394/series -> 422 '{"error":{"code":"outside_opening_hours","message":"the booking is outside opening hours"}}'>
+
+tk.py:216: AssertionError
+=========================== short test summary info ===========================
+FAILED test_43_series.py::test_first_failing_occurrence_in_index_order_decides
+1 failed, 104 passed in 154.82s (0:02:34)

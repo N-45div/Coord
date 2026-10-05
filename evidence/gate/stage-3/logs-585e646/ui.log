@@ -1,0 +1,86 @@
+PASS S2-001 / @1280: 200 text/html; charset=utf-8
+PASS S2-024 no horizontal scroll / @1280
+PASS S2-001 /signup @1280: 200 text/html; charset=utf-8
+PASS S2-024 no horizontal scroll /signup @1280
+PASS S2-001 /login @1280: 200 text/html; charset=utf-8
+PASS S2-024 no horizontal scroll /login @1280
+PASS S2-001 /lookup @1280: 200 text/html; charset=utf-8
+PASS S2-024 no horizontal scroll /lookup @1280
+PASS S2-001 / @375: 200 text/html; charset=utf-8
+PASS S2-024 no horizontal scroll / @375
+PASS S2-001 /signup @375: 200 text/html; charset=utf-8
+PASS S2-024 no horizontal scroll /signup @375
+PASS S2-001 /login @375: 200 text/html; charset=utf-8
+PASS S2-024 no horizontal scroll /login @375
+PASS S2-001 /lookup @375: 200 text/html; charset=utf-8
+PASS S2-024 no horizontal scroll /lookup @375
+PASS S2-004 auth-error absent before any error (A-26)
+PASS S2-004 signup dup email -> auth-error
+PASS S2-004 signup signs in; current-user has name
+PASS S2-004 auth-error removed after success
+PASS S2-003 current-user visible on /
+PASS S2-003 current-user visible on /lookup
+PASS S2-003 current-user visible on /login
+PASS S2-003 current-user visible on /signup
+PASS S2-003 logout
+PASS S2-004 wrong password -> auth-error
+PASS S2-004 login ok, auth-error gone
+PASS S2-008 signed-out click -> auth-error or /login (http://127.0.0.1:18393/)
+PASS S2-006/S2-010 48 cells vs API for r_anker 2026-11-12 party 2; mismatches []
+PASS S2-006/S2-010 48 cells vs API for r_anker 2026-11-12 party 5; mismatches []
+PASS S2-007 closed day -> no-slots, no cells
+PASS S2-008 clicking an unavailable cell does nothing
+PASS S2-023 available vs unavailable cells styled differently ['rgb(230, 243, 236)|rgb(20, 83, 54)|rgb(159, 205, 180)|1|none', 'rgb(241, 235, 228)|rgb(107, 95, 87
+PASS S2-011 booking-summary names table label and time: 'Garden 3\nZum Anker\nThu, 12 Nov 2026 at 19:00\nseats 4'
+PASS S2-011 booking-party-size prefilled from search
+PASS S2-012 confirmation-reference exactly a reference: '2YTVHJ3H'
+PASS S2-012 confirmation-details: 'Zum Anker · Garden 3 · Thu, 12 Nov 2026 at 19:00 · 2 guests'
+PASS S2-012 confirmation-tables
+PASS S2-012 reference exists server-side
+PASS S2-013 form stays after success
+PASS S2-013 unchanged resubmit -> same reference, no error, no new booking (2YTVHJ3H n 1->1)
+PASS S2-013 resubmit reused key and body: [('35996f7c-81ab-4bf2-8c13-aca387abbb5c', '{"restaurant_id":"r_anker","starts_at_local":"2026-11-12T19:00","party_size":
+PASS S2-013 changed field -> new key: ['35996f7c-81ab-4bf2-8c13-aca387abbb5c', '35996f7c-81ab-4bf2-8c13-aca387abbb5c', 'e6fd36d3-032c-4400-a88d-18102295c64b']
+NOTE S2-013 after changing party to 3 on the same table: error=1 ref=None
+PASS S2-014 409 -> booking-error
+PASS S2-014 no confirmation for the refused attempt
+PASS S2-014 availability refreshed
+PASS S2-014 form and inputs preserved
+PASS S2-011 pair summary names every table: 'Window 1 + Booth 2\nZum Anker\nFri, 13 Nov 2026 at 19:00\nseats 6'
+PASS S2-015 lost response -> booking-uncertain text
+PASS S2-015 no booking-error, no confirmation while uncertain
+PASS S2-015 server committed the lost booking: 201
+PASS S2-016 retry shows the original reference 43DY136K
+PASS S2-016 retry used the same key and body: [('6ed53877-b292-4d86-84a4-fd5389bd9a72', '{"restaurant_id":"r_anker","starts_at_local":"2026-11-13T19:00","party_si
+PASS S2-016 uncertainty/error elements removed after successful retry
+PASS S2-018 pair confirmation-tables
+PASS S2-016 exactly one booking after lost+retry: 1
+PASS S2-015 lost before commit -> uncertain
+PASS S2-016 confirmed rejection after uncertainty -> booking-error
+NOTE S2-016 after confirmed rejection: booking-uncertain count=0
+PASS S2-009 late response A must not restore A: B=('false', 'true') after A arrived=('false', 'true')
+PASS S2-009 booking form describes B (party 5)
+PASS S2-021 reservation-error absent initially
+PASS S2-019 status confirmed
+PASS S2-019 reservation-tables names every label: 'Garden 3 + Booth 2'
+PASS S2-020 cancel button absent once cancelled
+PASS S2-020 server cancelled
+PASS S2-021 unknown -> reservation-error, no detail
+PASS S2-021 another user's -> reservation-error, no detail
+PASS S2-021 refused cancel (cutoff) -> reservation-error, still confirmed
+PASS S2-029 export -> reset -> import between browser requests
+PASS S2-029 after upgrade, retry recovers the original confirmation without reload
+PASS S2-029 pending retry identity survived the upgrade
+PASS S2-027 still signed in after upgrade
+PASS S2-028 retained reference via lookup
+PASS S2-024 375px: no horizontal page scroll with the grid
+PASS S2-025 grid cell reachable by Tab: {'testid': 'slot-t_1-18:00', 'outline': 'solid 3px', 'shadow': 'none'}
+PASS S2-025 visible focus indicator on cell: {'testid': 'slot-t_1-18:00', 'outline': 'solid 3px', 'shadow': 'none'}
+PASS S2-025 Enter on a focused cell opens the booking form
+PASS S2-024 375px: no horizontal scroll with the booking form
+PASS S2-025 keyboard submit works
+PASS S2-024 375px: no horizontal scroll with confirmation
+PASS S2-025 inputs have labels: [{'id': 'restaurant-select', 'label': True}, {'id': 'date-input', 'label': True}, {'id': 'party-size-input', 'label': True}, {'id'
+PASS S2-024 375px lookup
+PASS S2-002 requests to other origins: []
+SUMMARY pass=83 fail=0 note=2 33.0s

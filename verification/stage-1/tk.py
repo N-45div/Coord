@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
-BASE_URL = os.environ.get("TK_BASE_URL", "http://localhost:18082").rstrip("/")
+BASE_URL = os.environ.get("TK_BASE_URL", "http://127.0.0.1:18082").rstrip("/")
 SECOND_BASE_URL = os.environ.get("TK_SECOND_BASE_URL", "").rstrip("/")
 REQ_TIMEOUT = 5.0  # spec §2: per-request timeout
 CTL_TIMEOUT = 10.0  # spec §2/§10: reset, import, export

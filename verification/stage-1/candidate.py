@@ -15,6 +15,7 @@ import datetime
 import json
 import os
 import pathlib
+import socket
 import subprocess
 import sys
 import time
@@ -46,6 +47,21 @@ def wait_healthy(url, limit=90.0):
             pass
         time.sleep(0.25)
     return None
+
+
+def port_busy(port):
+    """True if anything accepts on the port (IPv4 or IPv6 loopback). On Windows a second process can bind a
+    port that is already in use (SO_REUSEADDR) and a hung Docker proxy can keep listening, so a busy port
+    means results could come from a foreign listener."""
+    for fam, host in ((socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")):
+        with socket.socket(fam) as s:
+            s.settimeout(0.5)
+            try:
+                if s.connect_ex((host, port)) == 0:
+                    return True
+            except OSError:
+                pass
+    return False
 
 
 def main():
@@ -81,6 +97,8 @@ def main():
     summary = {"commit": sha, "stage": args.stage, "worktree": wt.as_posix(), "image": tag}
 
     procs = []
+    for p_ in (args.port, args.second_port):
+        assert not port_busy(p_), f"port {p_} already has a listener; refusing to run (results could be foreign)"
     if args.native:
         summary["mode"] = "native (no Docker): " + args.native
         nv = SCRATCH / f"native-venv-{short}"
@@ -101,11 +119,11 @@ def main():
             procs.append((pr, logf))
         t0 = time.monotonic()
         start(args.port, main_name)
-        base = f"http://localhost:{args.port}"
+        base = f"http://127.0.0.1:{args.port}"
         up = wait_healthy(base)
         summary["startup_seconds_main"] = None if up is None else round(time.monotonic() - t0, 1)
         start(args.second_port, second_name)
-        second = f"http://localhost:{args.second_port}"
+        second = f"http://127.0.0.1:{args.second_port}"
         up2 = wait_healthy(second)
         summary["startup_seconds_second"] = None if up2 is None else round(time.monotonic() - t0, 1)
     else:
@@ -120,13 +138,13 @@ def main():
         t0 = time.monotonic()
         sh("docker", "run", "-d", "--name", main_name, "--cpus", "2", "--memory", "2g",
            "-e", "PORT=9137", "-p", f"{args.port}:9137", tag)
-        base = f"http://localhost:{args.port}"
+        base = f"http://127.0.0.1:{args.port}"
         up = wait_healthy(base)
         summary["startup_seconds_main"] = None if up is None else round(time.monotonic() - t0, 1)
         t1 = time.monotonic()
         sh("docker", "run", "-d", "--name", second_name, "--cpus", "2", "--memory", "2g",
            "-p", f"{args.second_port}:8080", tag)
-        second = f"http://localhost:{args.second_port}"
+        second = f"http://127.0.0.1:{args.second_port}"
         up2 = wait_healthy(second)
         summary["startup_seconds_second_default_port"] = None if up2 is None else round(time.monotonic() - t1, 1)
 

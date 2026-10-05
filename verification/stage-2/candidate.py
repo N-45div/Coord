@@ -53,9 +53,18 @@ def wait_healthy(url, limit=90.0):
 
 
 def port_busy(port):
-    with socket.socket() as s:
-        s.settimeout(0.5)
-        return s.connect_ex(("127.0.0.1", port)) == 0
+    """True if anything accepts on the port (IPv4 or IPv6 loopback). On Windows a second process can bind a
+    port that is already in use (SO_REUSEADDR) and a hung Docker proxy can keep listening, so a busy port
+    means results could come from a foreign listener."""
+    for fam, host in ((socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")):
+        with socket.socket(fam) as s:
+            s.settimeout(0.5)
+            try:
+                if s.connect_ex((host, port)) == 0:
+                    return True
+            except OSError:
+                pass
+    return False
 
 
 def worktree(repo, commit):

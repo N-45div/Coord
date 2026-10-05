@@ -4,7 +4,7 @@ import json
 import pytest
 
 import tk
-from tk import THU, FRI, body, expect
+from tk import THU, FRI, body, expect, expect_no_5xx
 
 OTHER_REST = {
     "id": "r_other", "name": "Elsewhere", "timezone": "Europe/Berlin", "slot_minutes": 30,
@@ -199,10 +199,60 @@ def test_invalid_import_rejected_and_destination_unchanged(api, populated, bad):
         elif bad == "STATE_NUMBER":
             bad = {**exported, "state": 5}
         expect(api.import_(bad), 422, "validation_failed")
+    _assert_destination_unchanged(api, s)
+
+
+def _assert_destination_unchanged(api, s):
+    """After a rejected import (§10: 'without changing the destination'): bookings, tokens AND every
+    idempotency receipt are intact; replays create nothing. Tuned after Gate fault probe M8."""
     assert _snapshot(api, s.toks) == s.snap
-    rr = api.create(s.ada, s.b1, key=s.k1)
-    expect(rr, 200)
-    assert rr.json == s.o1
+    for key, b, o, tok in ((s.k1, s.b1, s.o1, s.ada), (s.k2, s.b2, s.o2, s.ada), (s.k3, s.b3, s.o3, s.dee)):
+        rr = api.create(tok, b, key=key)
+        expect(rr, 200)
+        assert rr.json == o, "receipt changed or lost after a rejected import"
+    rm = api.moves(s.ada, s.bm, key=s.km)
+    expect(rm, 200)
+    assert rm.json == s.om, "batch receipt changed or lost after a rejected import"
+    expect(api.create(s.ada, s.b2, key=s.k1), 409, "idempotency_key_reuse")
+    expect(api.moves(s.ada, {"moves": [{"reference": s.o2["reference"], "party_size": 1}]}, key=s.km),
+           409, "idempotency_key_reuse")
+    assert _snapshot(api, s.toks) == s.snap, "a replay after a rejected import changed state"
+
+
+def _corruptions(state):
+    """Type-corrupted copies of an opaque state: each top-level value, and the first element of each
+    top-level container, replaced by a value of another JSON type."""
+    def other(v):
+        return 12345 if isinstance(v, (str, list, dict)) else "corrupt"
+    out = []
+    for k, v in state.items():
+        out.append((f"{k}", {**state, k: other(v)}))
+        if isinstance(v, list) and v:
+            out.append((f"{k}[0]", {**state, k: [other(v[0])] + v[1:]}))
+        elif isinstance(v, dict) and v:
+            k2 = next(iter(v))
+            out.append((f"{k}.{k2}", {**state, k: {**v, k2: other(v[k2])}}))
+    return out
+
+
+@pytest.mark.ledger("S1-087", "S1-088")
+def test_import_of_internally_invalid_state_is_all_or_nothing(api, populated):
+    """§10: an invalid state gives 422 without changing the destination. The state format is the
+    service's own, so a corrupted copy may also be accepted (204); a 422 must leave everything intact.
+    Tuned after Gate fault probe M8 (receipts dropped on a rejected import)."""
+    s = populated
+    exported = api.export()
+    rejected = 0
+    for name, state in _corruptions(exported["state"]):
+        r = api.import_({**exported, "state": state})
+        expect_no_5xx(r)
+        if r.status == 204:
+            expect(api.import_(exported), 204)  # accepted as valid: restore and continue
+            continue
+        expect(r, 422, "validation_failed")
+        rejected += 1
+        _assert_destination_unchanged(api, s)
+    assert rejected, "no corrupted state was rejected; the invalid-state path is untested"
 
 
 @pytest.mark.ledger("S1-091", "S1-008")

@@ -1,28 +1,31 @@
-"""In-memory state: restaurants, users, tokens, reservations and idempotency receipts.
+"""In-memory state: restaurants and their policies, users, tokens, reservations with their
+revisions and histories, recurring series, and idempotency receipts.
 
 `State` is plain data. Reset and import build a complete new `State` and swap it in whole;
 every read and write of the live one happens under `Store.lock` (store.py).
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import re
 import secrets
 import string
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from . import timeutil
+from .policies import Hours, Policy, parse_hours, policy_from_state, select
 from .validate import MAX_ID, is_int
 
 CONFIRMED = "confirmed"
 CANCELLED = "cancelled"
 _REFERENCE_ALPHABET = string.ascii_uppercase + string.digits
+_REFERENCE = re.compile(r"[A-Z0-9]{6,12}")   # §8: 6 to 12 characters of A-Z0-9
 # Slot and duration bound (~950 years) that keeps start + duration inside datetime's range.
 # The cutoff has no bound: it is compared numerically, never added to a date.
 MAX_MINUTES = 500_000_000
-_REFERENCE = re.compile(r"[A-Z0-9]{6,12}")   # §8: 6 to 12 characters of A-Z0-9
 
 
 def is_reference(value) -> bool:
@@ -42,25 +45,8 @@ class Table:
 
 
 @dataclass(frozen=True)
-class Hours:
-    weekday: str
-    opens: str
-    closes: str
-
-    @property
-    def opens_min(self) -> int:
-        return timeutil.parse_hhmm(self.opens)
-
-    @property
-    def closes_min(self) -> int:
-        return timeutil.parse_hhmm(self.closes)
-
-    def to_json(self) -> dict:
-        return {"weekday": self.weekday, "opens": self.opens, "closes": self.closes}
-
-
-@dataclass(frozen=True)
 class Restaurant:
+    """A restaurant's fixture configuration. It never changes; policies are kept in State."""
     id: str
     name: str
     timezone: str
@@ -70,10 +56,15 @@ class Restaurant:
     opening_hours: tuple[Hours, ...]
     tables: tuple[Table, ...]
     combinable: tuple[tuple[str, str], ...] = ()   # declared pairs, in declaration order
+    manager_user_ids: tuple[str, ...] = ()
 
     @property
     def tz(self) -> ZoneInfo:
         return timeutil.zone(self.timezone)
+
+    @property
+    def table_ids(self) -> list[str]:
+        return [t.id for t in self.tables]
 
     def table(self, table_id: str) -> Table | None:
         for table in self.tables:
@@ -86,15 +77,10 @@ class Restaurant:
         wanted = set(table_ids)
         return next((p for p in self.combinable if set(p) == wanted), None)
 
-    def options(self) -> list[tuple[tuple[str, ...], int]]:
-        """Every seating option with its capacity: singles in fixture order, then pairs."""
-        capacity = {t.id: t.capacity for t in self.tables}
-        singles = [((t.id,), t.capacity) for t in self.tables]
-        pairs = [(p, capacity[p[0]] + capacity[p[1]]) for p in self.combinable]
-        return singles + pairs
-
-    def hours_on(self, weekday: str) -> list[Hours]:
-        return [h for h in self.opening_hours if h.weekday == weekday]
+    def policy_zero(self) -> Policy:
+        """The fixture's own rules: policy 0, in force before any published policy."""
+        return Policy(0, None, self.slot_minutes, self.duration_minutes, self.cutoff_minutes,
+                      self.opening_hours, tuple((t.id, t.capacity) for t in self.tables))
 
     def summary(self) -> dict:
         return {"id": self.id, "name": self.name, "timezone": self.timezone}
@@ -112,6 +98,9 @@ class Restaurant:
             "tables": [t.to_json() for t in self.tables],
             "combinable": [list(p) for p in self.combinable],
         }
+
+    def to_state(self) -> dict:
+        return {**self.to_json(), "manager_user_ids": list(self.manager_user_ids)}
 
 
 # ----------------------------------------------------------------------------- people
@@ -149,16 +138,31 @@ class Reservation:
     status: str
     local: datetime      # naive wall-clock start at the restaurant
     start: datetime      # UTC instant
-    end: datetime        # UTC instant; start + duration in absolute time
+    end: datetime        # UTC instant; start + the accepted duration, in absolute time
     created_at: str      # rendered once, never regenerated
     seq: int             # creation order, the deterministic tie-break for listings
+    revision: int = 1
+    terms: dict = field(default_factory=dict)       # accepted terms (a policy snapshot)
+    history: list[dict] = field(default_factory=list)
+    series_id: str | None = None
 
     @property
     def confirmed(self) -> bool:
         return self.status == CONFIRMED
 
+    @property
+    def cutoff_minutes(self) -> int:
+        return self.terms["cancellation_cutoff_minutes"]
+
     def overlaps(self, start: datetime, end: datetime) -> bool:
         return self.start < end and start < self.end
+
+    def record(self, event: str, changes: list[dict], at: str, **extra) -> None:
+        """Append a history entry carrying the resulting revision and terms (stage 3)."""
+        self.history.append({
+            "seq": len(self.history) + 1, "at": at, "event": event, "changes": changes,
+            **extra, "revision": self.revision, "accepted_terms": copy.deepcopy(self.terms),
+        })
 
     def to_response(self, tz: ZoneInfo) -> dict:
         tables = {"table_id": self.table_ids[0]} if len(self.table_ids) == 1 else {}
@@ -174,6 +178,8 @@ class Reservation:
             "starts_at": timeutil.render(self.start, tz),
             "ends_at": timeutil.render(self.end, tz),
             "created_at": self.created_at,
+            "revision": self.revision,
+            "accepted_terms": copy.deepcopy(self.terms),
         }
 
     def to_json(self) -> dict:
@@ -183,8 +189,57 @@ class Reservation:
             "party_size": self.party_size, "status": self.status,
             "starts_at_local": timeutil.format_local(self.local),
             "starts_at": timeutil.render(self.start), "ends_at": timeutil.render(self.end),
-            "created_at": self.created_at, "seq": self.seq,
+            "created_at": self.created_at, "seq": self.seq, "revision": self.revision,
+            "terms": copy.deepcopy(self.terms), "history": copy.deepcopy(self.history),
+            "series_id": self.series_id,
         }
+
+
+def table_change(before: list[str] | None, after: list[str]) -> dict | None:
+    """The history change for a table set: `table_id` between singles, else `table_ids`."""
+    if before is not None and set(before) == set(after):
+        return None
+    if len(after) == 1 and (before is None or len(before) == 1):
+        return {"field": "table_id", "from": before[0] if before else None, "to": after[0]}
+    return {"field": "table_ids", "from": list(before) if before else None, "to": list(after)}
+
+
+def created_changes(res: Reservation) -> list[dict]:
+    return [table_change(None, res.table_ids),
+            {"field": "starts_at_local", "from": None, "to": timeutil.format_local(res.local)},
+            {"field": "party_size", "from": None, "to": res.party_size}]
+
+
+# ----------------------------------------------------------------------------- series
+
+@dataclass
+class Occurrence:
+    index: int
+    reservation_id: str
+    scheduled: date          # the occurrence's scheduled local date, fixed at adoption
+    exception: bool = False
+
+    def to_json(self) -> dict:
+        return {"index": self.index, "reservation_id": self.reservation_id,
+                "scheduled": self.scheduled.isoformat(), "exception": self.exception}
+
+
+@dataclass
+class Series:
+    id: str
+    user_id: str
+    restaurant_id: str
+    interval_weeks: int
+    revision: int
+    occurrences: list[Occurrence]
+
+    def occurrence_of(self, reservation_id: str) -> Occurrence | None:
+        return next((o for o in self.occurrences if o.reservation_id == reservation_id), None)
+
+    def to_json(self) -> dict:
+        return {"id": self.id, "user_id": self.user_id, "restaurant_id": self.restaurant_id,
+                "interval_weeks": self.interval_weeks, "revision": self.revision,
+                "occurrences": [o.to_json() for o in self.occurrences]}
 
 
 @dataclass(frozen=True)
@@ -206,10 +261,28 @@ class State:
     user_by_email: dict[str, str] = field(default_factory=dict)
     tokens: dict[str, str] = field(default_factory=dict)          # token digest -> user id
     restaurants: dict[str, Restaurant] = field(default_factory=dict)
+    policies: dict[str, list[Policy]] = field(default_factory=dict)   # published, in order
+    restaurant_revision: dict[str, int] = field(default_factory=dict)
     reservations: dict[str, Reservation] = field(default_factory=dict)
     by_reference: dict[str, str] = field(default_factory=dict)    # reference -> reservation id
+    series: dict[str, Series] = field(default_factory=dict)
     receipts: dict[ReceiptKey, Receipt] = field(default_factory=dict)
     next_seq: int = 1
+
+    # -- restaurants and policies
+
+    def add_restaurant(self, restaurant: Restaurant) -> None:
+        if restaurant.id in self.restaurants:
+            raise ValueError(f"duplicate restaurant {restaurant.id!r}")
+        self.restaurants[restaurant.id] = restaurant
+        self.policies[restaurant.id] = []
+        self.restaurant_revision[restaurant.id] = 0
+
+    def policy_for(self, restaurant: Restaurant, day: date) -> Policy:
+        return select(restaurant.policy_zero(), self.policies[restaurant.id], day)
+
+    def bump_restaurant(self, restaurant_id: str) -> None:
+        self.restaurant_revision[restaurant_id] += 1
 
     # -- users and tokens
 
@@ -236,7 +309,7 @@ class State:
     def new_user_id(self) -> str:
         return self._fresh_id("u_", self.users)
 
-    # -- reservations
+    # -- reservations and series
 
     def add_reservation(self, res: Reservation) -> None:
         if res.id in self.reservations or res.reference in self.by_reference:
@@ -254,6 +327,9 @@ class State:
 
     def new_reservation_id(self) -> str:
         return self._fresh_id("res_", self.reservations)
+
+    def new_series_id(self) -> str:
+        return self._fresh_id("ser_", self.series)
 
     def new_reference(self) -> str:
         while True:
@@ -278,18 +354,13 @@ class State:
 # Fixtures (reset) and exported state (import) are both untrusted JSON. The loaders below
 # raise ValueError on anything malformed; the API turns that into 422 validation_failed.
 
-def _req(obj: dict, key: str, kind, default=None):
+def _req(obj: dict, key: str, kind):
     if not isinstance(obj, dict):
         raise ValueError("expected an object")
     if key not in obj:
-        if default is not None:
-            return default
         raise ValueError(f"missing {key!r}")
     value = obj[key]
-    if kind is int:
-        ok = is_int(value)
-    else:
-        ok = isinstance(value, kind)
+    ok = is_int(value) if kind is int else isinstance(value, kind)
     if not ok:
         raise ValueError(f"{key!r} has the wrong type")
     return value
@@ -302,10 +373,8 @@ def _id(obj: dict, key: str) -> str:
     return value
 
 
-def _list(obj: dict, key: str, required: bool = False) -> list:
-    if key not in obj and not required:
-        return []
-    return _req(obj, key, list)
+def _list(obj: dict, key: str) -> list:
+    return _req(obj, key, list) if key in obj else []
 
 
 def restaurant_from_json(obj: dict) -> Restaurant:
@@ -319,15 +388,7 @@ def restaurant_from_json(obj: dict) -> Restaurant:
         raise ValueError("cancellation_cutoff_minutes must be a non-negative integer")
     if not (1 <= slot <= MAX_MINUTES and 1 <= duration <= MAX_MINUTES):
         raise ValueError("slot_minutes and reservation_duration_minutes are out of range")
-    hours = []
-    for entry in _list(obj, "opening_hours"):
-        weekday = _req(entry, "weekday", str)
-        if weekday not in timeutil.WEEKDAYS:
-            raise ValueError(f"unknown weekday {weekday!r}")
-        h = Hours(weekday, _req(entry, "opens", str), _req(entry, "closes", str))
-        if h.closes_min <= h.opens_min:
-            raise ValueError("closes must be later than opens")
-        hours.append(h)
+    hours = parse_hours(obj.get("opening_hours", []), unique_weekdays=False)
     tables, seen = [], set()
     for entry in _list(obj, "tables"):
         tid = _id(entry, "id")
@@ -347,17 +408,55 @@ def restaurant_from_json(obj: dict) -> Restaurant:
             raise ValueError("combinable entries are pairs of two of the restaurant's tables")
         if set(entry) not in [set(p) for p in pairs]:
             pairs.append((entry[0], entry[1]))
-    return Restaurant(rid, name, tz_name, slot, duration, cutoff, tuple(hours), tuple(tables),
-                      tuple(pairs))
+    managers = _list(obj, "manager_user_ids")
+    if not all(isinstance(m, str) for m in managers):
+        raise ValueError("manager_user_ids must be strings")
+    return Restaurant(rid, name, tz_name, slot, duration, cutoff, hours, tuple(tables),
+                      tuple(pairs), tuple(managers))
 
 
-def _reservation_times(restaurant: Restaurant, starts_at_local: str):
+def _local_time(starts_at_local: str) -> datetime:
     local = datetime.strptime(starts_at_local, "%Y-%m-%dT%H:%M")
     if (timeutil.format_local(local) != starts_at_local
             or not timeutil.MIN_YEAR <= local.year <= timeutil.MAX_YEAR):
         raise ValueError(f"starts_at_local {starts_at_local!r} is not a supported local time")
-    start = timeutil.to_instant(restaurant.tz, local)
-    return local, start, start + timeutil.minutes(restaurant.duration_minutes)
+    return local
+
+
+def _table_set(restaurant: Restaurant, table_ids: list) -> list[str]:
+    """A stored table set: one table, or two in their declared combination order."""
+    if (not 1 <= len(table_ids) <= 2 or len(set(table_ids)) != len(table_ids)
+            or any(not isinstance(t, str) or restaurant.table(t) is None for t in table_ids)):
+        raise ValueError("a reservation holds one table or two distinct tables")
+    if len(table_ids) == 2:
+        return list(restaurant.pair(table_ids) or table_ids)
+    return list(table_ids)
+
+
+def _reference(item: dict) -> str:
+    reference = _req(item, "reference", str)
+    if not is_reference(reference):
+        raise ValueError("reference must be 6 to 12 characters of A-Z0-9")
+    return reference
+
+
+def _with_original_history(res: Reservation, restaurant: Restaurant, *, seeded: bool) -> Reservation:
+    """Stage-3 fields for a booking that predates them: seeded, or imported from stage 1-2.
+
+    Revision 1 under policy 0 with a `created` entry at its creation time. A cancelled one
+    also carries its `cancelled` entry: still at revision 1 when seeded (decision A-43), at
+    revision 2 when it was cancelled through the API before an upgrade (decision A-31).
+    """
+    res.terms = restaurant.policy_zero().terms()
+    res.revision = 1
+    res.history = []
+    at = timeutil.render(timeutil.parse_instant(res.created_at), restaurant.tz)
+    res.record("created", created_changes(res), at)
+    if res.status == CANCELLED:
+        if not seeded:
+            res.revision = 2
+        res.record("cancelled", [], at)
+    return res
 
 
 def seeded_reservation(obj: dict, state: State, reset_at: datetime) -> Reservation:
@@ -374,37 +473,27 @@ def seeded_reservation(obj: dict, state: State, reset_at: datetime) -> Reservati
     party_size = _req(obj, "party_size", int)
     if party_size < 1:
         raise ValueError("party_size must be at least 1")
-    local, start, end = _reservation_times(restaurant, _req(obj, "starts_at_local", str))
+    local = _local_time(_req(obj, "starts_at_local", str))
+    start = timeutil.to_instant(restaurant.tz, local)
     if obj.get("created_at") is None:
         created_at = timeutil.render(reset_at)
     else:
         instant = timeutil.parse_instant(obj["created_at"])
         created_at = timeutil.render(instant, instant.tzinfo)
-    return Reservation(
+    res = Reservation(
         id=_id(obj, "id"), reference=_reference(obj), user_id=_id(obj, "user_id"),
         restaurant_id=restaurant.id, table_ids=table_ids, party_size=party_size,
-        status=status, local=local, start=start, end=end, created_at=created_at,
+        status=status, local=local, start=start,
+        end=start + timeutil.minutes(restaurant.duration_minutes), created_at=created_at,
         seq=state.take_seq())
-
-
-def _table_set(restaurant: Restaurant, table_ids: list) -> list[str]:
-    """A stored table set: one table, or two in their declared combination order."""
-    if (not 1 <= len(table_ids) <= 2 or len(set(table_ids)) != len(table_ids)
-            or any(not isinstance(t, str) or restaurant.table(t) is None for t in table_ids)):
-        raise ValueError("a reservation holds one table or two distinct tables")
-    if len(table_ids) == 2:
-        return list(restaurant.pair(table_ids) or table_ids)
-    return list(table_ids)
+    return _with_original_history(res, restaurant, seeded=True)
 
 
 def state_from_fixture(fixture: dict, hasher) -> State:
     """The state a reset installs. `hasher` turns a plaintext password into its stored hash."""
     state = State()
     for obj in _list(fixture, "restaurants"):
-        restaurant = restaurant_from_json(obj)
-        if restaurant.id in state.restaurants:
-            raise ValueError(f"duplicate restaurant {restaurant.id!r}")
-        state.restaurants[restaurant.id] = restaurant
+        state.add_restaurant(restaurant_from_json(obj))
     for obj in _list(fixture, "users"):
         password = _req(obj, "password", str)
         state.add_user(User(_id(obj, "id"), _req(obj, "email", str),
@@ -418,18 +507,23 @@ def state_from_fixture(fixture: dict, hasher) -> State:
 # ----------------------------------------------------------------------------- export/import
 
 STATE_SCHEMA = "tablekeeper-state"
-STATE_STAGE = 2
-READABLE_STAGES = (1, 2)   # exports from the stage-1 service load unchanged: no combinable pairs
+STATE_STAGE = 3
+READABLE_STAGES = (1, 2, 3)   # earlier stages' exports are upgraded on import (A-31)
 
 
 def state_to_json(state: State) -> dict:
     return {
         "schema": STATE_SCHEMA,
         "stage": STATE_STAGE,
-        "restaurants": [r.to_json() for r in state.restaurants.values()],
+        "restaurants": [
+            {**r.to_state(), "revision": state.restaurant_revision[r.id],
+             "policies": [p.to_json() for p in state.policies[r.id]]}
+            for r in state.restaurants.values()
+        ],
         "users": [u.to_json() for u in state.users.values()],
         "tokens": [{"token_sha256": digest, "user_id": uid} for digest, uid in state.tokens.items()],
         "reservations": [r.to_json() for r in state.reservations.values()],
+        "series": [s.to_json() for s in state.series.values()],
         "receipts": [
             {"user_id": k[0], "method": k[1], "path": k[2], "key": k[3],
              "fingerprint": rec.fingerprint, "status": rec.status, "response": rec.response}
@@ -441,14 +535,17 @@ def state_to_json(state: State) -> dict:
 
 def state_from_json(obj: dict, valid_hash) -> State:
     """Rebuild exported state exactly; raises ValueError (or KeyError/TypeError) if invalid."""
-    if _req(obj, "schema", str) != STATE_SCHEMA or _req(obj, "stage", int) not in READABLE_STAGES:
+    stage = _req(obj, "stage", int)
+    if _req(obj, "schema", str) != STATE_SCHEMA or stage not in READABLE_STAGES:
         raise ValueError("state was not exported by this service")
     state = State()
     for item in _req(obj, "restaurants", list):
         restaurant = restaurant_from_json(item)
-        if restaurant.id in state.restaurants:
-            raise ValueError("duplicate restaurant")
-        state.restaurants[restaurant.id] = restaurant
+        state.add_restaurant(restaurant)
+        if stage >= 3:
+            state.restaurant_revision[restaurant.id] = _req(item, "revision", int)
+            for policy in _req(item, "policies", list):
+                state.policies[restaurant.id].append(policy_from_state(policy, restaurant.table_ids))
     for item in _req(obj, "users", list):
         password_hash = _req(item, "password_hash", str)
         if not valid_hash(password_hash):
@@ -461,7 +558,10 @@ def state_from_json(obj: dict, valid_hash) -> State:
             raise ValueError("token for an unknown user")
         state.tokens[_req(item, "token_sha256", str)] = user_id
     for item in _req(obj, "reservations", list):
-        state.add_reservation(_reservation_from_json(item, state))
+        state.add_reservation(_reservation_from_json(item, state, stage))
+    for item in (_req(obj, "series", list) if stage >= 3 else []):
+        series = _series_from_json(item, state)
+        state.series[series.id] = series
     for item in _req(obj, "receipts", list):
         key = (_req(item, "user_id", str), _req(item, "method", str), _req(item, "path", str),
                _req(item, "key", str))
@@ -471,32 +571,51 @@ def state_from_json(obj: dict, valid_hash) -> State:
     return state
 
 
-def _reference(item: dict) -> str:
-    reference = _req(item, "reference", str)
-    if not is_reference(reference):
-        raise ValueError("reference must be 6 to 12 characters of A-Z0-9")
-    return reference
-
-
-def _reservation_from_json(item: dict, state: State) -> Reservation:
+def _reservation_from_json(item: dict, state: State, stage: int) -> Reservation:
     restaurant = state.restaurants.get(_req(item, "restaurant_id", str))
     if restaurant is None:
         raise ValueError("reservation at an unknown restaurant")
-    table_ids = _table_set(restaurant, _req(item, "table_ids", list))
     status = _req(item, "status", str)
     if status not in (CONFIRMED, CANCELLED):
         raise ValueError("unknown reservation status")
     party_size = _req(item, "party_size", int)
-    local_text = _req(item, "starts_at_local", str)
-    local = datetime.strptime(local_text, "%Y-%m-%dT%H:%M")
     start = timeutil.parse_instant(_req(item, "starts_at", str))
     end = timeutil.parse_instant(_req(item, "ends_at", str))
     created_at = _req(item, "created_at", str)
     timeutil.parse_instant(created_at)
     if party_size < 1 or end <= start:
         raise ValueError("invalid reservation")
-    return Reservation(
+    res = Reservation(
         id=_id(item, "id"), reference=_reference(item), user_id=_id(item, "user_id"),
-        restaurant_id=restaurant.id, table_ids=list(table_ids), party_size=party_size,
-        status=status, local=local, start=start.astimezone(timeutil.UTC),
-        end=end.astimezone(timeutil.UTC), created_at=created_at, seq=_req(item, "seq", int))
+        restaurant_id=restaurant.id, table_ids=_table_set(restaurant, _req(item, "table_ids", list)),
+        party_size=party_size, status=status, local=_local_time(_req(item, "starts_at_local", str)),
+        start=start.astimezone(timeutil.UTC), end=end.astimezone(timeutil.UTC),
+        created_at=created_at, seq=_req(item, "seq", int))
+    if stage < 3:
+        return _with_original_history(res, restaurant, seeded=False)
+    res.revision = _req(item, "revision", int)
+    res.terms = _req(item, "terms", dict)
+    res.history = _req(item, "history", list)
+    if not isinstance(res.terms.get("cancellation_cutoff_minutes"), int) or not res.history:
+        raise ValueError("invalid accepted terms or history")
+    series_id = item.get("series_id")
+    if series_id is not None and not isinstance(series_id, str):
+        raise ValueError("invalid series id")
+    res.series_id = series_id
+    return res
+
+
+def _series_from_json(item: dict, state: State) -> Series:
+    occurrences = []
+    for occ in _req(item, "occurrences", list):
+        res_id = _req(occ, "reservation_id", str)
+        if res_id not in state.reservations:
+            raise ValueError("series occurrence names an unknown reservation")
+        occurrences.append(Occurrence(_req(occ, "index", int), res_id,
+                                      date.fromisoformat(_req(occ, "scheduled", str)),
+                                      _req(occ, "exception", bool)))
+    series = Series(_id(item, "id"), _id(item, "user_id"), _id(item, "restaurant_id"),
+                    _req(item, "interval_weeks", int), _req(item, "revision", int), occurrences)
+    if series.restaurant_id not in state.restaurants or not occurrences:
+        raise ValueError("invalid series")
+    return series

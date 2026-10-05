@@ -10,10 +10,11 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable
 
-from . import booking, timeutil
+from . import booking, series, timeutil
 from .errors import ApiError, invalid, not_found, unauthenticated
 from .jsonio import depth, fingerprint, parse_object
 from .model import Receipt, State, User, state_from_fixture, state_from_json, state_to_json
+from .policies import parse_publication
 from .passwords import DUMMY_HASH, hash_password, is_valid_hash, verify_password
 from .store import Store
 from .validate import check_id, query_positive_int, require_present, string_field
@@ -49,11 +50,15 @@ class Api:
     # ------------------------------------------------------------------ helpers
 
     def _caller(self, state: State, req: Request) -> User:
-        match = _BEARER.fullmatch(req.header("authorization") or "")
-        user = state.user_for_token(match.group(1)) if match else None
+        user = self._caller_if_any(state, req)
         if user is None:
             raise unauthenticated()
         return user
+
+    def _caller_if_any(self, state: State, req: Request) -> User | None:
+        """The authenticated user, or None. For owner-only reads that answer 404 to anyone else."""
+        match = _BEARER.fullmatch(req.header("authorization") or "")
+        return state.user_for_token(match.group(1)) if match else None
 
     def _idempotent(self, state: State, user: User, req: Request, body: dict,
                     action: Callable[[], dict]) -> Response:
@@ -161,6 +166,11 @@ class Api:
 
     # ------------------------------------------------------------------ public browsing (§8)
 
+    def restaurant_summaries(self) -> list[dict]:
+        """The restaurant list the page shell embeds (same content as GET /restaurants)."""
+        with self.store.lock:
+            return [r.summary() for r in self.store.state.restaurants.values()]
+
     def restaurants(self, req: Request) -> Response:
         with self.store.lock:
             items = [r.summary() for r in self.store.state.restaurants.values()]
@@ -181,12 +191,45 @@ class Api:
         restaurant_id = check_id(params["restaurant_id"], "restaurant_id")
         day = timeutil.parse_date(params["date"])
         party_size = query_positive_int(params["party_size"], "party_size")
+        explain = req.query.get("explain")
+        if explain is not None and explain != "true":
+            raise invalid("explain accepts only the value true")
         with self.store.lock:
             state = self.store.state
             restaurant = state.restaurants.get(restaurant_id)
             if restaurant is None:
                 raise not_found("no such restaurant")
-            return 200, booking.availability(state, restaurant, day, party_size)
+            return 200, booking.availability(state, restaurant, day, party_size, explain == "true")
+
+    # ------------------------------------------------------------------ policies (stage 3)
+
+    def policies(self, req: Request) -> Response:
+        with self.store.lock:
+            state = self.store.state
+            if req.params["id"] not in state.restaurants:
+                raise not_found("no such restaurant")
+            return 200, {"policies": [p.to_json() for p in state.policies[req.params["id"]]]}
+
+    def publish_policy(self, req: Request) -> Response:
+        """POST /restaurants/{id}/policies (decision A-27)."""
+        with self.store.lock:
+            state = self.store.state
+            user = self._caller(state, req)
+            body = parse_object(req.body)
+            return self._idempotent(state, user, req, body,
+                                    lambda: self._publish(state, user, req.params["id"], body))
+
+    def _publish(self, state: State, user: User, restaurant_id: str, body: dict) -> dict:
+        restaurant = state.restaurants.get(restaurant_id)
+        if restaurant is None:
+            raise not_found("no such restaurant")
+        if user.id not in restaurant.manager_user_ids:
+            raise ApiError(403, "forbidden", "only this restaurant's managers may publish policies")
+        published = state.policies[restaurant.id]
+        policy = parse_publication(body, restaurant.table_ids, len(published) + 1)
+        published.append(policy)
+        state.bump_restaurant(restaurant.id)
+        return policy.to_json()
 
     # ------------------------------------------------------------------ reservations (§8, §11)
 
@@ -210,6 +253,30 @@ class Api:
         with self.store.lock:
             state = self.store.state
             return 200, booking.list_for(state, self._caller(state, req))
+
+    def reservation_history(self, req: Request) -> Response:
+        with self.store.lock:
+            state = self.store.state
+            return 200, booking.history(state, self._caller_if_any(state, req), req.params["reference"])
+
+    def reservation_decision(self, req: Request) -> Response:
+        with self.store.lock:
+            state = self.store.state
+            return 200, booking.decision(state, self._caller_if_any(state, req), req.params["reference"])
+
+    def create_series(self, req: Request) -> Response:
+        with self.store.lock:
+            state = self.store.state
+            user = self._caller(state, req)
+            body = parse_object(req.body)
+            return self._idempotent(state, user, req, body,
+                                    lambda: series.adopt(state, user, body, timeutil.now()))
+
+    def get_series(self, req: Request) -> Response:
+        with self.store.lock:
+            state = self.store.state
+            found = series.owned_series(state, self._caller_if_any(state, req), req.params["id"])
+            return 200, series.view(state, found)
 
     def get_reservation(self, req: Request) -> Response:
         with self.store.lock:

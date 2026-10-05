@@ -1,4 +1,4 @@
-# Tablekeeper stage 2: Python 3.12 standard library plus the IANA tz database (tzdata).
+# Tablekeeper stage 3: Python 3.12 standard library plus the IANA tz database (tzdata).
 # Everything is installed at build time; nothing is fetched at run time.
 FROM python:3.12-slim-bookworm
 

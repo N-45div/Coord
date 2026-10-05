@@ -263,8 +263,18 @@
 
   // ------------------------------------------------------------------ search and booking
 
+  /** The restaurant list the server embedded in the page, or null. */
+  function embeddedRestaurants() {
+    try {
+      const data = JSON.parse(document.getElementById("restaurants-data").textContent);
+      return Array.isArray(data) ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
   const search = {
-    restaurants: null,        // [{id, name, timezone}] once loaded
+    restaurants: embeddedRestaurants(),   // [{id, name, timezone}]; refreshed on each visit
     restaurantsFailed: false,
     form: { restaurantId: "", date: todayIso(), party: "2" },
     seq: 0,                   // the newest search owns the screen; older responses are dropped
@@ -454,7 +464,8 @@
       el("h2", { class: "results__title" }, `${detail.name} · ${formatDate(params.date)}`),
       el("p", { class: "results__meta" },
         refreshing ? "Updating availability…"
-          : `Party of ${party} · ${open} of ${slots.length} times with a free table · times are local to the restaurant`));
+          : slots.length ? `Party of ${party} · ${open} of ${slots.length} times with a free table · times are local to the restaurant`
+            : `Party of ${party} · no bookable times on this day`));
     if (!slots.length) {
       return [head, el("div", { class: "empty", testid: "no-slots" },
         el("h3", {}, "No tables on this day"),
@@ -468,14 +479,14 @@
     for (const slot of slots) {
       const time = localTime(slot.starts_at_local);
       const singles = new Set(slot.available_table_ids);
-      const openPairs = new Set((slot.available_options || [])
-        .filter((o) => o.table_ids.length === 2).map((o) => o.table_ids.join("+")));
+      // Seats come from the options when offered: they follow the policy for this date.
+      const offered = new Map((slot.available_options || []).map((o) => [o.table_ids.join("+"), o.capacity]));
       const options = el("div", { class: "slot-options" });
       for (const table of detail.tables) {
-        options.append(cell(view, slot, [table.id], singles.has(table.id), labels, capacity));
+        options.append(cell(view, slot, [table.id], singles.has(table.id), labels, capacity, offered));
       }
       for (const pair of pairs) {
-        options.append(cell(view, slot, pair, openPairs.has(pair.join("+")), labels, capacity));
+        options.append(cell(view, slot, pair, offered.has(pair.join("+")), labels, capacity, offered));
       }
       grid.append(el("div", { class: "slot-row", role: "listitem" },
         el("div", { class: "slot-time" }, el("time", { datetime: slot.starts_at }, time)),
@@ -484,11 +495,11 @@
     return [head, legend, grid];
   }
 
-  function cell(view, slot, tableIds, available, labels, capacity) {
+  function cell(view, slot, tableIds, available, labels, capacity, offered) {
     const key = tableIds.join("+");
     const time = localTime(slot.starts_at_local);
     const name = seatingName(tableIds, labels);
-    const seats = tableIds.reduce((sum, id) => sum + (capacity.get(id) || 0), 0);
+    const seats = offered.get(key) ?? tableIds.reduce((sum, id) => sum + (capacity.get(id) || 0), 0);
     const picked = Boolean(search.selection && search.selection.key === key
       && search.selection.startsAtLocal === slot.starts_at_local);
     const classes = ["cell", tableIds.length > 1 && "cell--pair", available ? "cell--open" : "cell--off", picked && "cell--picked"]
@@ -595,6 +606,12 @@
       booking.confirmation ? confirmationView(booking.confirmation) : null);
   }
 
+  /** Bring a new confirmation into view; on a phone it sits below a long grid. */
+  function showConfirmation() {
+    const box = document.querySelector("[data-testid='confirmation']");
+    if (box) box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
   function confirmationView({ reservation, restaurantName, labels }) {
     const tableIds = reservation.table_ids || [reservation.table_id];
     const seating = seatingName(tableIds, labels);
@@ -659,6 +676,7 @@
       booking.error = null;
       booking.confirmation = { reservation: result.data, restaurantName: selection.restaurantName, labels: selection.labels };
       renderBooking();
+      showConfirmation();
       refreshAvailability();
       return;
     }

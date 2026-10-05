@@ -30,6 +30,12 @@ ROUTES = [
     ("PATCH", "/reservations/{reference}", "amend_reservation"),
     ("POST", "/reservations/{reference}/cancel", "cancel_reservation"),
     ("POST", "/reservation-moves", "move_reservations"),
+    ("GET", "/reservations/{reference}/history", "reservation_history"),
+    ("GET", "/reservations/{reference}/decision", "reservation_decision"),
+    ("GET", "/restaurants/{id}/policies", "policies"),
+    ("POST", "/restaurants/{id}/policies", "publish_policy"),
+    ("POST", "/series", "create_series"),
+    ("GET", "/series/{id}", "get_series"),
 ]
 _COMPILED = [(method, template.split("/")[1:], name) for method, template, name in ROUTES]
 
@@ -114,7 +120,7 @@ def make_handler(api: Api):
                 self._send(400, ApiError(400, "malformed_request", str(exc)).body())
                 return
             url = urlsplit(self.path)
-            page = _page(url.path) if self.command in ("GET", "HEAD") else None
+            page = _page(url.path, api) if self.command in ("GET", "HEAD") else None
             if page is not None:
                 self._send_asset(page)
                 return
@@ -177,10 +183,10 @@ _CSP = ("default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 
         "connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
 
 
-def _page(path: str) -> ui.Asset | None:
+def _page(path: str, api: Api) -> ui.Asset | None:
     """The screen shell or static asset for a browser route, None for API paths."""
     if path in ui.SCREENS:
-        return ui.screen()
+        return ui.screen(api.restaurant_summaries())
     if path.startswith("/static/"):
         return ui.asset(unquote(path[len("/static/"):]))
     return None

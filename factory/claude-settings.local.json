@@ -1,0 +1,8 @@
+{
+  "claudeMdExcludes": [
+    "C:/Users/DivijN/.claude/CLAUDE.md",
+    "c:/Users/DivijN/.claude/CLAUDE.md",
+    "C:\\Users\\DivijN\\.claude\\CLAUDE.md",
+    "**/DivijN/.claude/CLAUDE.md"
+  ]
+}

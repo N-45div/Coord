@@ -25,10 +25,14 @@ DEFAULT_REPO = HERE.parent.parent
 SCRATCH = pathlib.Path(os.environ.get("TK_VERIFIER_SCRATCH", "C:/Users/DivijN/dark-factory/band-work/scratch/verifier"))
 
 
-def sh(*cmd, check=True, capture=False):
+def sh(*cmd, check=True, capture=False, timeout=None):
     print("+", " ".join(str(c) for c in cmd), flush=True)
-    return subprocess.run([str(c) for c in cmd], check=check, text=True,
-                          capture_output=capture)
+    try:
+        return subprocess.run([str(c) for c in cmd], check=check, text=True, encoding="utf-8", errors="replace",
+                              capture_output=capture, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        print(f"! timed out after {timeout}s: {cmd[0]} {cmd[1] if len(cmd) > 1 else ''}", flush=True)
+        return subprocess.CompletedProcess(cmd, 124, "", "timeout")
 
 
 def wait_healthy(url, limit=90.0):
@@ -52,6 +56,10 @@ def main():
     ap.add_argument("--second-port", type=int, default=18092)
     ap.add_argument("--repo", default=str(DEFAULT_REPO))
     ap.add_argument("--keep", action="store_true", help="leave containers running")
+    ap.add_argument("--native", default=None,
+                    help="fallback when Docker is unavailable: command run in the stage folder with PORT set, "
+                         "e.g. 'python -m tablekeeper' (python = a fresh venv of py -3.12)")
+    ap.add_argument("--native-pip", default="", help="space-separated pinned packages for the native venv")
     args, rest = ap.parse_known_args()
     if rest and rest[0] == "--":
         rest = rest[1:]
@@ -72,35 +80,66 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     summary = {"commit": sha, "stage": args.stage, "worktree": wt.as_posix(), "image": tag}
 
-    t0 = time.monotonic()
-    sh("docker", "build", "-t", tag, stage_dir.as_posix())
-    summary["build_seconds"] = round(time.monotonic() - t0, 1)
+    procs = []
+    if args.native:
+        summary["mode"] = "native (no Docker): " + args.native
+        nv = SCRATCH / f"native-venv-{short}"
+        npy = nv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        if not npy.exists():
+            sh("py", "-3.12", "-m", "venv", nv.as_posix())
+            if args.native_pip.split():
+                sh(npy, "-m", "pip", "install", "-q", "--disable-pip-version-check", *args.native_pip.split())
+        argv = args.native.split()
+        if argv[0] == "python":
+            argv[0] = str(npy)
+        main_name, second_name = f"native-main-{args.port}", f"native-second-{args.second_port}"
 
-    main_name, second_name = f"tk-verifier-main-{args.port}", f"tk-verifier-second-{args.second_port}"
-    for n in (main_name, second_name):
-        sh("docker", "rm", "-f", n, check=False, capture=True)
-    t0 = time.monotonic()
-    sh("docker", "run", "-d", "--name", main_name, "--cpus", "2", "--memory", "2g",
-       "-e", "PORT=9137", "-p", f"{args.port}:9137", tag)
-    base = f"http://localhost:{args.port}"
-    up = wait_healthy(base)
-    summary["startup_seconds_main"] = None if up is None else round(time.monotonic() - t0, 1)
-    t1 = time.monotonic()
-    sh("docker", "run", "-d", "--name", second_name, "--cpus", "2", "--memory", "2g",
-       "-p", f"{args.second_port}:8080", tag)
-    second = f"http://localhost:{args.second_port}"
-    up2 = wait_healthy(second)
-    summary["startup_seconds_second_default_port"] = None if up2 is None else round(time.monotonic() - t1, 1)
+        def start(port, name):
+            logf = open(out / f"{name}.log", "w", encoding="utf-8")
+            env = dict(os.environ, PORT=str(port), PYTHONDONTWRITEBYTECODE="1")
+            pr = subprocess.Popen(argv, cwd=stage_dir.as_posix(), env=env, stdout=logf, stderr=subprocess.STDOUT)
+            procs.append((pr, logf))
+        t0 = time.monotonic()
+        start(args.port, main_name)
+        base = f"http://localhost:{args.port}"
+        up = wait_healthy(base)
+        summary["startup_seconds_main"] = None if up is None else round(time.monotonic() - t0, 1)
+        start(args.second_port, second_name)
+        second = f"http://localhost:{args.second_port}"
+        up2 = wait_healthy(second)
+        summary["startup_seconds_second"] = None if up2 is None else round(time.monotonic() - t0, 1)
+    else:
+        summary["mode"] = "docker"
+        t0 = time.monotonic()
+        sh("docker", "build", "-t", tag, stage_dir.as_posix())
+        summary["build_seconds"] = round(time.monotonic() - t0, 1)
+
+        main_name, second_name = f"tk-verifier-main-{args.port}", f"tk-verifier-second-{args.second_port}"
+        for n in (main_name, second_name):
+            sh("docker", "rm", "-f", n, check=False, capture=True, timeout=60)
+        t0 = time.monotonic()
+        sh("docker", "run", "-d", "--name", main_name, "--cpus", "2", "--memory", "2g",
+           "-e", "PORT=9137", "-p", f"{args.port}:9137", tag)
+        base = f"http://localhost:{args.port}"
+        up = wait_healthy(base)
+        summary["startup_seconds_main"] = None if up is None else round(time.monotonic() - t0, 1)
+        t1 = time.monotonic()
+        sh("docker", "run", "-d", "--name", second_name, "--cpus", "2", "--memory", "2g",
+           "-p", f"{args.second_port}:8080", tag)
+        second = f"http://localhost:{args.second_port}"
+        up2 = wait_healthy(second)
+        summary["startup_seconds_second_default_port"] = None if up2 is None else round(time.monotonic() - t1, 1)
 
     rc = 99
     try:
         if up is None:
             print("main container never became healthy", file=sys.stderr)
         else:
-            sec = summary["startup_seconds_second_default_port"]
-            env = dict(os.environ, TK_STARTUP_SECONDS=str(summary["startup_seconds_main"]),
-                       TK_CANDIDATE_DIR=stage_dir.as_posix(),
-                       TK_SECOND_STARTUP_SECONDS="never" if sec is None else str(sec))
+            env = dict(os.environ, TK_CANDIDATE_DIR=stage_dir.as_posix())
+            if not args.native:  # container startup and default-port evidence only from the Docker mode
+                sec = summary["startup_seconds_second_default_port"]
+                env.update(TK_STARTUP_SECONDS=str(summary["startup_seconds_main"]),
+                           TK_SECOND_STARTUP_SECONDS="never" if sec is None else str(sec))
             cmd = [sys.executable, str(HERE / "run.py"), "--base-url", base,
                    "--junitxml", (out / "junit.xml").as_posix(), *rest]
             if up2 is not None:
@@ -116,14 +155,24 @@ def main():
                 rc = p.wait()
             summary["suite_seconds"] = round(time.monotonic() - t2, 1)
     finally:
-        for n in (main_name, second_name):
-            st = sh("docker", "inspect", "-f", "{{.State.Status}} oom={{.State.OOMKilled}} restarts={{.RestartCount}}", n,
-                    check=False, capture=True).stdout.strip()
-            summary[f"state_{n}"] = st
-            logs = sh("docker", "logs", n, check=False, capture=True)
-            (out / f"{n}.log").write_text((logs.stdout or "") + (logs.stderr or ""), encoding="utf-8")
-            if not args.keep:
-                sh("docker", "rm", "-f", n, check=False, capture=True)
+        if args.native:
+            for pr, logf in procs:
+                summary[f"exit_{pr.pid}"] = pr.poll()
+                pr.terminate()
+                try:
+                    pr.wait(10)
+                except subprocess.TimeoutExpired:
+                    pr.kill()
+                logf.close()
+        else:
+            for n in (main_name, second_name):
+                st = sh("docker", "inspect", "-f", "{{.State.Status}} oom={{.State.OOMKilled}} restarts={{.RestartCount}}",
+                        n, check=False, capture=True, timeout=60).stdout.strip()
+                summary[f"state_{n}"] = st
+                logs = sh("docker", "logs", n, check=False, capture=True, timeout=60)
+                (out / f"{n}.log").write_text((logs.stdout or "") + (logs.stderr or ""), encoding="utf-8")
+                if not args.keep:
+                    sh("docker", "rm", "-f", n, check=False, capture=True, timeout=60)
         summary["pytest_exit"] = rc
         summary["results_dir"] = out.as_posix()
         (out / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")

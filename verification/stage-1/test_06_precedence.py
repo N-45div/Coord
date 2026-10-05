@@ -111,7 +111,7 @@ PATCH_CASES = [
     ("grid beats capacity", {"starts_at_local": f"{THU}T20:15", "party_size": 5}, 422, "not_on_slot_grid"),
     ("capacity on merged result", {"party_size": 5}, 422, "party_exceeds_capacity"),
     ("capacity beats occupancy", {"table_id": "t_1", "party_size": 3}, 422, "party_exceeds_capacity"),
-    ("occupancy", {"table_id": "t_1"}, 409, "table_unavailable"),
+    ("occupancy", {"table_id": "t_1", "party_size": 2}, 409, "table_unavailable"),
 ]
 
 

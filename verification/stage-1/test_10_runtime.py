@@ -172,11 +172,12 @@ def test_64_character_fixture_ids_work_everywhere(api):
     expect(d, 200)
     assert d.json["tables"] == rest["tables"]
     assert api.free_tables(ID64, f"{THU}T21:00", 2) == [TID64]
-    made = api.book(w.ada, ID64, TID64, f"{THU}T21:00")
+    tok = w.tok(UID64)
+    made = api.book(tok, ID64, TID64, f"{THU}T21:00")
     assert made["restaurant_id"] == ID64 and made["table_id"] == TID64
-    got = api.get_ok(w.ada, "LONGID1")
+    got = api.get_ok(tok, "LONGID1")
     assert got["reservation_id"] == RID64
-    m = api.moves(w.ada, {"moves": [{"reference": "LONGID1", "party_size": 3}]})
+    m = api.moves(tok, {"moves": [{"reference": "LONGID1", "party_size": 3}]})
     expect(m, 201)
 
 

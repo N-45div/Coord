@@ -12,12 +12,12 @@ log() { echo "[$(date +%H:%M:%S)] $*" | tee -a "$OUT/driver.log"; }
 if [ ! -d "$WT" ]; then git -C "$REPO" worktree add --detach "$WT" "$SHA" >>"$OUT/driver.log" 2>&1; fi
 log "worktree HEAD $(git -C "$WT" rev-parse HEAD) status: '$(git -C "$WT" status --porcelain | head -3)'"
 IMG=tk-gate-s$N-$SHORT
-docker rm -f tk-gate-a tk-gate-b tk-gate-c >/dev/null 2>&1
+timeout 60 docker rm -f tk-gate-a tk-gate-b tk-gate-c >/dev/null 2>&1
 t0=$(date +%s)
-docker build -t "$IMG" "$WT/stage-$N" >"$OUT/build.log" 2>&1; rc=$?
+timeout 900 docker build -t "$IMG" "$WT/stage-$N" >"$OUT/build.log" 2>&1; rc=$?
 log "docker build rc=$rc in $(( $(date +%s) - t0 ))s (image $IMG)"
 [ $rc -ne 0 ] && exit 1
-docker image inspect "$IMG" --format 'image size {{.Size}} bytes' | tee -a "$OUT/driver.log"
+timeout 60 docker image inspect "$IMG" --format 'image size {{.Size}} bytes' | tee -a "$OUT/driver.log"
 
 wait_health() { # port name
   local s=$(date +%s%N) code
@@ -28,12 +28,13 @@ wait_health() { # port name
   done
   log "$2 NOT healthy within 60s"; return 1
 }
-docker run -d --name tk-gate-a --cpus 2 --memory 2g -e PORT=8080 -p 18083:8080 "$IMG" >/dev/null; wait_health 18083 "A(PORT=8080,2cpu,2g)"
-docker run -d --name tk-gate-b --cpus 2 --memory 2g -p 18084:8080 "$IMG" >/dev/null; wait_health 18084 "B(no PORT env -> default 8080)"
-docker run -d --name tk-gate-c --cpus 2 --memory 2g -e PORT=9123 -p 18085:9123 "$IMG" >/dev/null; wait_health 18085 "C(PORT=9123)"
+timeout 60 docker run -d --name tk-gate-a --cpus 2 --memory 2g -e PORT=8080 -p 18083:8080 "$IMG" >/dev/null; wait_health 18083 "A(PORT=8080,2cpu,2g)"
+timeout 60 docker run -d --name tk-gate-b --cpus 2 --memory 2g -p 18084:8080 "$IMG" >/dev/null; wait_health 18084 "B(no PORT env -> default 8080)"
+timeout 60 docker run -d --name tk-gate-c --cpus 2 --memory 2g -e PORT=9123 -p 18085:9123 "$IMG" >/dev/null; wait_health 18085 "C(PORT=9123)"
 log "probe start"
 py -3.12 C:/Users/DivijN/dark-factory/band-work/scratch/gate/tk/probe_s$N.py http://127.0.0.1:18083 http://127.0.0.1:18085 >"$OUT/probe.log" 2>&1
 log "probe rc=$? :: $(grep SUMMARY "$OUT/probe.log")"
-docker stats --no-stream --format '{{.Name}} cpu={{.CPUPerc}} mem={{.MemUsage}}' tk-gate-a tk-gate-b tk-gate-c | tee -a "$OUT/driver.log"
-docker logs tk-gate-a >"$OUT/container-a.log" 2>&1
+timeout 60 docker stats --no-stream --format '{{.Name}} cpu={{.CPUPerc}} mem={{.MemUsage}}' tk-gate-a tk-gate-b tk-gate-c | tee -a "$OUT/driver.log"
+timeout 60 docker logs tk-gate-a >"$OUT/container-a.log" 2>&1
 grep -c . "$OUT/container-a.log" | xargs -I{} echo "container-a log lines: {}" | tee -a "$OUT/driver.log"
+timeout 60 docker rm -f tk-gate-a tk-gate-b tk-gate-c >/dev/null 2>&1; log "containers removed"

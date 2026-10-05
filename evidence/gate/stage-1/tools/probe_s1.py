@@ -737,6 +737,9 @@ def run():
     else:
         check("S1-087", call("GET", "/reservations", token=ada).json == cur_ada and
               call("GET", "/reservations", token=zed).status == 200, "state unchanged after rejected imports")
+        r = call("POST", "/reservations", body1, token=ada, key=K1)
+        check("S1-087", r.status == 200 and r.json == res1, "receipts unchanged after rejected imports " + repr(r)[:120])
+        check("S1-087", call("GET", "/reservations", token=ada).json == cur_ada, "replay after rejected imports booked nothing")
     for attempt in range(2):
         r = call("POST", "/_test/import", E1)
         expect("S1-086", r, 204, what=f"import #{attempt + 1}")

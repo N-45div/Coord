@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tablekeeper · Book a table</title>
+  <meta name="description" content="Find a table, book it in seconds, and manage your reservation.">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="/" data-link>
+        <img class="brand__mark" src="/static/favicon.svg" alt="" width="28" height="28">
+        <span class="brand__name">Tablekeeper</span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="/" data-link data-nav="/">Find a table</a>
+        <a href="/lookup" data-link data-nav="/lookup">My booking</a>
+      </nav>
+      <div class="account" id="account" aria-live="polite"></div>
+    </div>
+  </header>
+  <!--tablekeeper:restaurants-->
+  <main id="main" class="page" tabindex="-1">
+    <noscript>
+      <p class="notice notice--error">Tablekeeper needs JavaScript to search and book tables.</p>
+    </noscript>
+  </main>
+  <footer class="site-footer">
+    <p>Tablekeeper · Reservations made simple. Times are shown in each restaurant's local time.</p>
+  </footer>
+</body>
+</html>

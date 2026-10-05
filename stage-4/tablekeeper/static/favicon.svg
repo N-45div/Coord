@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Tablekeeper">
+  <rect width="32" height="32" rx="8" fill="#8c2f1b"/>
+  <circle cx="16" cy="15" r="7.5" fill="none" stroke="#fbe9d0" stroke-width="2"/>
+  <path d="M7 9v6.5M5 9v4a2 2 0 0 0 4 0V9M7 15.5V24M25 9c-1.7 0-2.5 2.2-2.5 5s.8 3.5 2.5 3.5V24"
+        fill="none" stroke="#fbe9d0" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

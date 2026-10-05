@@ -389,3 +389,9 @@ Every requirement of an earlier stage stays in force in every later stage folder
 - A-40 **Series amend precedence**: 401 → 400 body → key / idempotency → 404 series → 422 body → 409 `stale_revision` → per eligible occurrence in index order: old accepted cutoff (409 `cutoff_passed`) then resulting-field validation (non-occupancy codes) → occupancy over the whole resulting set (409 `table_unavailable`).
 - A-41 **Scheduled date** of occurrence i = anchor local date + i × interval_weeks × 7 days (the anchor's original date at adoption); `local_time` must still exist on that date and satisfy the selected policy.
 - A-42 **Reassigned entry shape**: `{seq, at, event:"reassigned", changes:[{field:"table_ids", from:[...], to:[...]}], plan_id, revision, accepted_terms}`; `table_ids` is used even for single→single repairs.
+
+---
+
+## Environment decisions and blockers
+
+- E-01 (2026-10-05 22:12 IST) **BLOCKED: shared Docker daemon hung.** Evidence: `docker version` times out after 15-20 s; dockerd/containerd idle (load 0.00) in the docker-desktop VM with 10 GiB free; docker clients stuck since 21:59 IST (an `inspect` of tk-verifier-main-18082, an `rm -f` of tk-gate-a/b/c, a `ps`). Reported by Gate. Coordinator attempted to restart Docker Desktop; the runtime refused (not permitted to interfere with other workloads), so no restart or process kill was done by any seat on Coordinator's instruction. Non-docker work continues (code/ledger audit, suite writing); a read-only probe watches for recovery. Any result from a run interrupted by the hang is void as evidence.

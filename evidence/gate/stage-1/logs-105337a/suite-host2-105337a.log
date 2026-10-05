@@ -1,0 +1,76 @@
+........................................................................ [ 18%]
+........................................................................ [ 37%]
+.F........ss..........F..........................s...................... [ 56%]
+........................................................................ [ 75%]
+............................................s........................... [ 93%]
+.......................                                                  [100%]
+================================== FAILURES ===================================
+_______ test_patch_rule_precedence_and_no_change_on_failure[occupancy] ________
+
+pw = <tk.World object at 0x0000013F754A3890>
+api = <tk.Api object at 0x0000013F754A2EA0>, desc = 'occupancy'
+b = {'table_id': 't_1'}, status = 409, code = 'table_unavailable'
+
+    @pytest.mark.ledger("A-04", "S1-075", "S1-079")
+    @pytest.mark.parametrize("desc,b,status,code", PATCH_CASES, ids=[c[0] for c in PATCH_CASES])
+    def test_patch_rule_precedence_and_no_change_on_failure(pw, api, desc, b, status, code):
+        api.book(pw.bob, "r_anker", "t_1", f"{THU}T19:00")
+        mine = api.book(pw.ada, "r_anker", "t_2", f"{THU}T19:00", 4)
+>       expect(api.patch(pw.ada, mine["reference"], b), status, code)
+
+test_06_precedence.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+r = <PATCH http://127.0.0.1:18383/reservations/ET7D29E3 -> 422 '{"error":{"code":"party_exceeds_capacity","message":"the party is larger than the table"}}'>
+status = 409, code = 'table_unavailable'
+
+    def expect(r, status, code=None):
+        want = f"{status} {code}" if code else f"{status}"
+        if status >= 400 and code is not None and r.status == status:
+            assert_error_body(r)
+            assert r.json["error"]["code"] == code, f"expected {want}, got {r!r}"
+>       assert r.status == status, f"expected {want}, got {r!r}"
+E       AssertionError: expected 409 table_unavailable, got <PATCH http://127.0.0.1:18383/reservations/ET7D29E3 -> 422 '{"error":{"code":"party_exceeds_capacity","message":"the party is larger than the table"}}'>
+
+tk.py:187: AssertionError
+________________ test_64_character_fixture_ids_work_everywhere ________________
+
+api = <tk.Api object at 0x0000013F7517A750>
+
+    @pytest.mark.ledger("S1-012")
+    def test_64_character_fixture_ids_work_everywhere(api):
+        rest = {**tk.ANKER, "id": ID64, "tables": [{"id": TID64, "label": "Long", "capacity": 4}]}
+        user = {**tk.ADA, "id": UID64}
+        seeded = tk.seed(RID64, "LONGID1", UID64, ID64, TID64, f"{THU}T18:00", 2)
+        for x in (ID64, TID64, UID64, RID64):
+            assert len(x) == 64
+        w = tk.World(api, tk.fixture(users=(user,), restaurants=(rest,), reservations=[seeded]))
+        assert api.login(user["email"], user["password"]).json["user_id"] == UID64
+        d = api.call("GET", f"/restaurants/{ID64}")
+        expect(d, 200)
+        assert d.json["tables"] == rest["tables"]
+        assert api.free_tables(ID64, f"{THU}T21:00", 2) == [TID64]
+>       made = api.book(w.ada, ID64, TID64, f"{THU}T21:00")
+
+test_10_runtime.py:175: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tk.py:418: in ada
+    return self.tok("u_ada")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <tk.World object at 0x0000013F72BFA8D0>, uid = 'u_ada'
+
+    def tok(self, uid):
+        if uid not in self._tok:
+>           u = self.users[uid]
+E           KeyError: 'u_ada'
+
+tk.py:412: KeyError
+=========================== short test summary info ===========================
+FAILED test_06_precedence.py::test_patch_rule_precedence_and_no_change_on_failure[occupancy]
+FAILED test_10_runtime.py::test_64_character_fixture_ids_work_everywhere - Ke...
+SKIPPED [1] test_10_runtime.py:22: TK_STARTUP_SECONDS not provided (set by candidate.py)
+SKIPPED [1] test_10_runtime.py:30: TK_CANDIDATE_DIR not provided (set by candidate.py)
+SKIPPED [1] test_10_runtime.py:262: needs candidate.py (TK_SECOND_STARTUP_SECONDS)
+SKIPPED [1] test_13_create.py:113: null for a required string: missing (422) or wrong type (400) is not decided by the spec
+2 failed, 377 passed, 4 skipped in 664.53s (0:11:04)

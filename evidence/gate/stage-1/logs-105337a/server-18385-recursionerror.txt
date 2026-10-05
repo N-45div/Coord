@@ -1,0 +1,27 @@
+28:RecursionError: maximum recursion depth exceeded
+55:RecursionError: maximum recursion depth exceeded
+    status, payload = getattr(api, name)(request)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\DivijN\dark-factory\band-work\scratch\gate\105337a\stage-1\tablekeeper\api.py", line 201, in move_reservations
+    return self._idempotent(state, user, req, body,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\DivijN\dark-factory\band-work\scratch\gate\105337a\stage-1\tablekeeper\api.py", line 69, in _idempotent
+    request_print = fingerprint(body)
+                    ^^^^^^^^^^^^^^^^^
+  File "C:\Users\DivijN\dark-factory\band-work\scratch\gate\105337a\stage-1\tablekeeper\jsonio.py", line 49, in fingerprint
+    return json.dumps(_normalise(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+                      ^^^^^^^^^^^^^^^^^
+  File "C:\Users\DivijN\dark-factory\band-work\scratch\gate\105337a\stage-1\tablekeeper\jsonio.py", line 42, in _normalise
+    return {k: _normalise(v) for k, v in value.items()}
+               ^^^^^^^^^^^^^
+  File "C:\Users\DivijN\dark-factory\band-work\scratch\gate\105337a\stage-1\tablekeeper\jsonio.py", line 44, in _normalise
+    return [_normalise(v) for v in value]
+            ^^^^^^^^^^^^^
+  File "C:\Users\DivijN\dark-factory\band-work\scratch\gate\105337a\stage-1\tablekeeper\jsonio.py", line 44, in _normalise
+    return [_normalise(v) for v in value]
+            ^^^^^^^^^^^^^
+  File "C:\Users\DivijN\dark-factory\band-work\scratch\gate\105337a\stage-1\tablekeeper\jsonio.py", line 44, in _normalise
+    return [_normalise(v) for v in value]
+            ^^^^^^^^^^^^^
+  [Previous line repeated 984 more times]
+RecursionError: maximum recursion depth exceeded

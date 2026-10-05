@@ -12,13 +12,16 @@ from typing import Callable
 
 from . import booking, timeutil
 from .errors import ApiError, invalid, not_found, unauthenticated
-from .jsonio import fingerprint, parse_object
+from .jsonio import depth, fingerprint, parse_object
 from .model import Receipt, State, User, state_from_fixture, state_from_json, state_to_json
 from .passwords import DUMMY_HASH, hash_password, is_valid_hash, verify_password
 from .store import Store
 from .validate import check_id, query_positive_int, require_present, string_field
 
 MAX_IDEMPOTENCY_KEY = 255
+# Exported state nests a handful of levels. Imported state is deep-copied by export and
+# re-serialised by replays, so anything far deeper is refused rather than recursed into.
+MAX_STATE_DEPTH = 64
 _BEARER = re.compile(r"Bearer +(\S+) *", re.IGNORECASE)
 _EMAIL = re.compile(r"[^@\s]+@[^@\s]+")
 
@@ -103,6 +106,8 @@ class Api:
         if (envelope.get("track") != "tablekeeper" or type(version) is not int or version != 1
                 or not isinstance(envelope.get("state"), dict)):
             raise invalid("expected {track: tablekeeper, format_version: 1, state: {...}}")
+        if depth(envelope["state"]) > MAX_STATE_DEPTH:
+            raise invalid("state is nested too deeply to have been exported by this service")
         try:
             state = state_from_json(envelope["state"], is_valid_hash)
         except Exception as exc:  # any defect in an untrusted state is a validation failure

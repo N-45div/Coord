@@ -102,8 +102,15 @@ def exists(tz: ZoneInfo, local: datetime) -> bool:
 
 
 def render(instant: datetime, tz: ZoneInfo | timezone = UTC) -> str:
-    """RFC 3339 with an explicit numeric offset, seconds precision."""
-    return instant.astimezone(tz).isoformat(timespec="seconds")
+    """RFC 3339 with an explicit numeric offset, seconds precision.
+
+    RFC 3339 offsets are whole minutes. A zone's historic local mean time can be offset by
+    seconds (Berlin before 1893 was +00:53:28); such an instant is rendered in UTC instead.
+    """
+    local = instant.astimezone(tz)
+    if local.utcoffset().total_seconds() % 60:
+        local = instant.astimezone(UTC)
+    return local.isoformat(timespec="seconds")
 
 
 def parse_instant(text: str) -> datetime:

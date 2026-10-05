@@ -164,4 +164,8 @@ def _header_text(value: str) -> str:
 class Server(ThreadingHTTPServer):
     daemon_threads = True
     request_queue_size = 512
-    allow_reuse_address = True
+
+    def handle_error(self, request, client_address) -> None:
+        # A client dropping its connection is routine (timeouts, aborted fetches); log the rest.
+        if not isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError)):
+            super().handle_error(request, client_address)

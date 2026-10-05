@@ -523,6 +523,9 @@ def plan_oracle(considered, options, blocked):
             if any(s < b["end"] and b["start"] < e for t in opt for s, e in blocked.get(t, [])):
                 continue
             fo.append((rank, opt))
+        # search cheap options first (unchanged, then fewest unused seats) so pruning bites early;
+        # the result does not depend on this order
+        fo.sort(key=lambda ro: (set(ro[1]) != set(b["tables"]), sum(b["caps"][t] for t in ro[1]), ro[0]))
         feas.append(fo)
     best = [None, None]
     chosen = []

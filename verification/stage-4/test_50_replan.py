@@ -207,16 +207,21 @@ def test_random_scenarios_match_oracle(api, seed_no):
         check_plan(r, cons, orc, closed, f, t)
 
 
-@pytest.mark.ledger("S4-004")
+@pytest.mark.ledger("S4-004", "S4-006")
 def test_more_than_six_considered_may_hit_planning_limit(api):
-    seeds = [seed(f"RL{i:04d}", [tid], f"{D}T19:00", 1) for i, tid in enumerate(["r_1", "r_2", "r_3", "r_4", "r_5"])]
-    seeds += [seed("RL0005", ["r_6"], f"{D}T18:00", 1), seed("RL0006", ["r_6"], f"{D}T20:00", 1)]
+    """Seven considered bookings (closure covers the whole day): beyond the supported size, so 422
+    planning_limit is allowed; a returned plan must still be the optimum."""
+    seeds = [seed("RL0000", ["r_1"], f"{D}T19:00", 1)]
+    seeds += [seed(f"RL000{i}", [tid], f"{D}T12:00", 1) for i, tid in enumerate(["r_2", "r_3", "r_4", "r_5", "r_6"], 1)]
+    seeds.append(seed("RL0006", ["r_2"], f"{D}T15:00", 1))
     w = world(api, seeds)
-    r, cons, orc, f, t = preview(api, w, "r_1", f"{D}T18:00", f"{D}T22:00")
+    r, cons, orc, f, t = preview(api, w, "r_1", f"{D}T12:00", f"{D}T23:00")
+    assert len(cons) == 7
     tk.expect_no_5xx(r)
     if r.status == 422:
         expect(r, 422, "planning_limit")
     else:
+        assert orc[1] is not None and orc[1][0] == 1, orc
         check_plan(r, cons, orc, "r_1", f, t)
 
 

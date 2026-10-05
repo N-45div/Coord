@@ -126,7 +126,7 @@ def test_amend_request_rules_stale_and_replay(sw, api):
 
 @pytest.mark.ledger("S4-026", "S1-043")
 def test_occupancy_conflict_changes_nothing(sw, api):
-    api.book(sw.bob, "r_rep", "r_3", "2027-07-01T21:30", 2)
+    api.book(sw.bob, "r_rep", "r_3", "2027-07-01T21:00", 2)  # occurrence 2 at 20:00 would overlap
     before = state(api, sw)
     rr0 = api.rrev(sw.mgr, "r_rep", "r_6")
     key = tk.new_key()
@@ -134,7 +134,7 @@ def test_occupancy_conflict_changes_nothing(sw, api):
     assert state(api, sw) == before
     assert api.rrev(sw.mgr, "r_rep", "r_6") == rr0
     assert expect(api.get_series(sw.ada, sw.sid), 200)["revision"] == 1
-    expect(api.amend(sw.ada, sw.sid, amend_body(1, 1, "19:30"), key=key), 201)  # key reusable after 4xx
+    expect(api.amend(sw.ada, sw.sid, amend_body(1, 1, "18:30"), key=key), 201)  # key reusable after 4xx
 
 
 @pytest.mark.ledger("S4-026", "A-40")
@@ -142,7 +142,7 @@ def test_non_occupancy_errors_take_precedence_in_index_order(sw, api):
     expect(api.publish(sw.mgr, "r_rep", tk.policy("2027-07-01", slot=60, dur=120,
                                                   hours=REP["opening_hours"],
                                                   caps={t["id"]: t["capacity"] for t in REP["tables"]})), 201)
-    api.book(sw.bob, "r_rep", "r_3", "2027-06-24T21:30", 2)  # occurrence 1 at 20:30 would overlap
+    api.book(sw.bob, "r_rep", "r_3", "2027-06-24T21:00", 2)  # occurrence 1 at 20:30 would overlap
     # occurrence 2 (2027-07-01) uses a 60-minute grid from 12:00: 20:30 is off-grid
     expect(api.amend(sw.ada, sw.sid, amend_body(1, 1, "20:30")), 422, "not_on_slot_grid")
 

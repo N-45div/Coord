@@ -1,0 +1,13 @@
+[23:15:22] worktree HEAD 105337a075758d7e8d190b959c811554afd32db2 status: ''
+[23:15:27] docker build rc=0 in 5s (image tk-gate-s1-105337a)
+image size 46102292 bytes
+[23:15:29] A(PORT=8080,2cpu,2g) healthy after 493 ms: Content-Type: application/json; charset=utf-8 {"status":"ok"} 
+[23:15:31] B(no PORT env -> default 8080) healthy after 472 ms: Content-Type: application/json; charset=utf-8 {"status":"ok"} 
+[23:15:34] C(PORT=9123) healthy after 530 ms: Content-Type: application/json; charset=utf-8 {"status":"ok"} 
+[23:15:34] probe start
+[23:15:37] probe rc=0 :: SUMMARY pass=240 fail=0 note=9 requests=412 3.0s
+tk-gate-a cpu=0.01% mem=39.23MiB / 2GiB
+tk-gate-b cpu=0.01% mem=17.75MiB / 2GiB
+tk-gate-c cpu=0.01% mem=30.82MiB / 2GiB
+container-a log lines: 1
+[23:15:53] containers removed

@@ -3,10 +3,10 @@
 Every function here runs with the store lock held, so each request sees and changes the
 state as if it ran alone. Writes validate everything first and mutate only at the end:
 
-- `place` is the one place a start time, table and party size are checked against the
-  restaurant's rules (§8, §9);
+- `select_tables` and `place` are the one place a table set, start time and party size
+  are checked against the restaurant's rules (§8, §9, stage-2 combinations);
 - `ensure_free` is the one place occupancy is checked, over the whole resulting set of
-  bookings (§1, §11). Create, PATCH and moves all go through both.
+  bookings (§1, §11). Create, PATCH and moves all go through all three.
 """
 from __future__ import annotations
 
@@ -14,11 +14,9 @@ from dataclasses import dataclass
 from datetime import date, datetime, time
 
 from . import timeutil
-from .errors import ApiError, invalid, not_found
+from .errors import ApiError, invalid, malformed, not_found
 from .model import CANCELLED, CONFIRMED, Reservation, Restaurant, State, Table, User
 from .validate import MISSING, check_id, check_party_size, require_present, string_field
-
-AMENDABLE = ("table_id", "starts_at_local", "party_size")
 
 
 @dataclass(frozen=True)
@@ -57,26 +55,84 @@ def day_slots(restaurant: Restaurant, day: date) -> list[tuple[datetime, datetim
 
 
 def availability(state: State, restaurant: Restaurant, day: date, party_size: int) -> dict:
+    """Free seating per slot: single tables (`available_table_ids`) and every option."""
     tz = restaurant.tz
     duration = timeutil.minutes(restaurant.duration_minutes)
     booked = [r for r in state.at_restaurant(restaurant.id) if r.confirmed]
+    options = [(ids, capacity) for ids, capacity in restaurant.options() if capacity >= party_size]
     slots = []
     for local, start in day_slots(restaurant, day):
         end = start + duration
-        free = [t.id for t in restaurant.tables
-                if t.capacity >= party_size
-                and not any(t.id in r.table_ids and r.overlaps(start, end) for r in booked)]
+        taken = {t for r in booked if r.overlaps(start, end) for t in r.table_ids}
+        free = [{"table_ids": list(ids), "capacity": capacity}
+                for ids, capacity in options if not taken.intersection(ids)]
         slots.append({"starts_at_local": timeutil.format_local(local),
                       "starts_at": timeutil.render(start, tz),
-                      "available_table_ids": free})
+                      "available_table_ids": [o["table_ids"][0] for o in free
+                                              if len(o["table_ids"]) == 1],
+                      "available_options": free})
     return {"restaurant_id": restaurant.id, "date": day.isoformat(),
             "timezone": restaurant.timezone, "slots": slots}
 
 
 # ----------------------------------------------------------------------------- rules
 
-def place(restaurant: Restaurant, table: Table, local: datetime, party_size: int) -> Placement:
-    """Validate a start, table and party size against the restaurant's rules (§8, §9).
+def check_table_types(body: dict) -> None:
+    """400 when `table_id` is not a string or `table_ids` is not an array of strings."""
+    string_field(body, "table_id")
+    if "table_ids" in body:
+        table_ids = body["table_ids"]
+        if not isinstance(table_ids, list) or not all(isinstance(t, str) for t in table_ids):
+            raise malformed("table_ids must be an array of table id strings")
+
+
+def requested_tables(body: dict, *, required: bool):
+    """The requested table ids, or MISSING when an amendment leaves the tables alone.
+
+    Shape rules (decision A-20): exactly one of `table_id` / `table_ids`, a non-empty set,
+    no duplicate ids. Types were already checked by `check_table_types`.
+    """
+    has_one, has_set = "table_id" in body, "table_ids" in body
+    if has_one and has_set:
+        raise invalid("send either table_id or table_ids, not both")
+    if not has_one and not has_set:
+        if required:
+            raise invalid("missing required field: table_id or table_ids")
+        return MISSING
+    table_ids = [body["table_id"]] if has_one else list(body["table_ids"])
+    if not table_ids:
+        raise invalid("table_ids must name at least one table")
+    for table_id in table_ids:
+        check_id(table_id, "table_ids")
+    if len(set(table_ids)) != len(table_ids):
+        raise invalid("table_ids must not repeat a table")
+    return table_ids
+
+
+def select_tables(restaurant: Restaurant, table_ids: list[str]) -> list[Table]:
+    """The tables of a requested set, in stored order (a pair in its declared order).
+
+    404 for an unknown table or one of another restaurant; 422 combination_not_allowed
+    for more than two tables or a pair the restaurant has not declared.
+    """
+    tables = []
+    for table_id in table_ids:
+        table = restaurant.table(table_id)
+        if table is None:
+            raise not_found("no such table at this restaurant")
+        tables.append(table)
+    if len(tables) == 1:
+        return tables
+    pair = restaurant.pair(table_ids) if len(tables) == 2 else None
+    if pair is None:
+        raise ApiError(422, "combination_not_allowed",
+                       "only a declared pair of tables can be combined")
+    return [restaurant.table(table_id) for table_id in pair]
+
+
+def place(restaurant: Restaurant, tables: list[Table], local: datetime,
+          party_size: int) -> Placement:
+    """Validate a start, table set and party size against the restaurant's rules (§8, §9).
 
     Order (decision A-02): nonexistent local time, opening hours, slot grid, capacity.
     """
@@ -93,9 +149,9 @@ def place(restaurant: Restaurant, table: Table, local: datetime, party_size: int
         raise ApiError(422, "outside_opening_hours", "the booking is outside opening hours")
     if (minute - hours.opens_min) % restaurant.slot_minutes:
         raise ApiError(422, "not_on_slot_grid", "the start is not on the slot grid")
-    if party_size > table.capacity:
-        raise ApiError(422, "party_exceeds_capacity", "the party is larger than the table")
-    return Placement((table.id,), local, start, end, party_size)
+    if party_size > sum(t.capacity for t in tables):
+        raise ApiError(422, "party_exceeds_capacity", "the party is larger than the seating")
+    return Placement(tuple(t.id for t in tables), local, start, end, party_size)
 
 
 def ensure_free(state: State, restaurant: Restaurant, placements: dict[str, Placement]) -> None:
@@ -138,30 +194,23 @@ def owned(state: State, user: User, reference: str) -> Reservation:
     return res
 
 
-def _table(restaurant: Restaurant, table_id: str) -> Table:
-    table = restaurant.table(table_id)
-    if table is None:
-        raise not_found("no such table at this restaurant")
-    return table
-
-
 # ----------------------------------------------------------------------------- create
 
 def create(state: State, user: User, body: dict) -> dict:
-    """POST /reservations after authentication and idempotency (§8, decision A-02)."""
+    """POST /reservations after authentication and idempotency (decisions A-02, A-20)."""
     restaurant_id = string_field(body, "restaurant_id")
-    table_id = string_field(body, "table_id")
+    check_table_types(body)
     local_text = string_field(body, "starts_at_local")
-    require_present(body, ("restaurant_id", "table_id", "starts_at_local", "party_size"))
+    require_present(body, ("restaurant_id", "starts_at_local", "party_size"))
+    table_ids = requested_tables(body, required=True)
     check_id(restaurant_id, "restaurant_id")
-    check_id(table_id, "table_id")
     party_size = check_party_size(body["party_size"])
     local = timeutil.parse_local_datetime(local_text)
 
     restaurant = state.restaurants.get(restaurant_id)
     if restaurant is None:
         raise not_found("no such restaurant")
-    placement = place(restaurant, _table(restaurant, table_id), local, party_size)
+    placement = place(restaurant, select_tables(restaurant, table_ids), local, party_size)
     res_id = state.new_reservation_id()
     ensure_free(state, restaurant, {res_id: placement})
 
@@ -179,7 +228,7 @@ def create(state: State, user: User, body: dict) -> dict:
 
 def check_amendment_types(body: dict) -> None:
     """400 for a PATCH field of the wrong JSON type (`party_size` is always 422 instead)."""
-    string_field(body, "table_id")
+    check_table_types(body)
     string_field(body, "starts_at_local")
 
 
@@ -187,27 +236,26 @@ def plan_amendment(state: State, restaurant: Restaurant, res: Reservation, body:
                    now: datetime) -> Placement | None:
     """Validate one amendment; return its placement, or None when it changes nothing.
 
-    Order (decision A-04): cancelled, cutoff against the current start, field formats,
-    then the create rules on the merged booking. Nothing is mutated here.
+    Order (decisions A-04, A-20): cancelled, cutoff against the current start, field
+    formats, then the create rules on the merged booking. Nothing is mutated here. A table
+    set equal to the current one in any order is not a change.
     """
     if not res.confirmed:
         raise ApiError(409, "reservation_cancelled", "the reservation is cancelled")
     check_cutoff(restaurant, res, now)
 
-    table_id = body.get("table_id", MISSING)
+    table_ids = requested_tables(body, required=False)
     local_text = body.get("starts_at_local", MISSING)
     party_size = body.get("party_size", MISSING)
-    if table_id is not MISSING:
-        check_id(table_id, "table_id")
     if party_size is not MISSING:
         check_party_size(party_size)
     local = timeutil.parse_local_datetime(local_text) if local_text is not MISSING else res.local
 
-    table_id = res.table_ids[0] if table_id is MISSING else table_id
+    table_ids = res.table_ids if table_ids is MISSING else table_ids
     party_size = res.party_size if party_size is MISSING else party_size
-    if (table_id, local, party_size) == (res.table_ids[0], res.local, res.party_size):
+    if (set(table_ids), local, party_size) == (set(res.table_ids), res.local, res.party_size):
         return None
-    return place(restaurant, _table(restaurant, table_id), local, party_size)
+    return place(restaurant, select_tables(restaurant, table_ids), local, party_size)
 
 
 def apply_placement(res: Reservation, placement: Placement) -> None:
@@ -233,7 +281,7 @@ def amend(state: State, user: User, reference: str, body: dict, now: datetime) -
 # ----------------------------------------------------------------------------- cancel
 
 def cancel(state: State, user: User, reference: str, now: datetime) -> dict:
-    """POST /reservations/{reference}/cancel (§8, decision A-05)."""
+    """POST /reservations/{reference}/cancel (§8, decision A-05); frees every table."""
     res = owned(state, user, reference)
     restaurant = state.restaurants[res.restaurant_id]
     if res.status != CANCELLED:

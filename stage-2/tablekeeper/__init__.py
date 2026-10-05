@@ -1,1 +1,1 @@
-"""Tablekeeper: a restaurant reservation service (stage 1)."""
+"""Tablekeeper: a restaurant reservation service (stage 2: online booking and combined tables)."""

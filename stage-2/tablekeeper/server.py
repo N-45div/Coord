@@ -6,6 +6,7 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlsplit
 
+from . import ui
 from .api import Api, Request
 from .errors import ApiError
 from .jsonio import dumps
@@ -113,6 +114,10 @@ def make_handler(api: Api):
                 self._send(400, ApiError(400, "malformed_request", str(exc)).body())
                 return
             url = urlsplit(self.path)
+            page = _page(url.path) if self.command in ("GET", "HEAD") else None
+            if page is not None:
+                self._send_asset(page)
+                return
             segments = [unquote(s) for s in url.path.split("/")[1:]]
             route = match(self.command, segments)
             try:
@@ -135,6 +140,20 @@ def make_handler(api: Api):
                                                   "message": "unexpected server error"}}
             self._send(status, payload)
 
+        def _send_asset(self, page: ui.Asset) -> None:
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", page.content_type)
+                self.send_header("Content-Length", str(len(page.body)))
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Security-Policy", _CSP)
+                self.end_headers()
+                if self.command != "HEAD":
+                    self.wfile.write(page.body)
+            except (BrokenPipeError, ConnectionResetError):
+                self.close_connection = True
+
         def _send(self, status: int, payload) -> None:
             data = b"" if payload is None else dumps(payload)
             try:
@@ -151,6 +170,20 @@ def make_handler(api: Api):
                 self.close_connection = True
 
     return Handler
+
+
+# The page uses only its own script, stylesheet and inline-SVG images.
+_CSP = ("default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
+        "connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+
+
+def _page(path: str) -> ui.Asset | None:
+    """The screen shell or static asset for a browser route, None for API paths."""
+    if path in ui.SCREENS:
+        return ui.screen()
+    if path.startswith("/static/"):
+        return ui.asset(unquote(path[len("/static/"):]))
+    return None
 
 
 def _header_text(value: str) -> str:

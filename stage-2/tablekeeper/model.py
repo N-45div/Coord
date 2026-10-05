@@ -69,6 +69,7 @@ class Restaurant:
     cutoff_minutes: int
     opening_hours: tuple[Hours, ...]
     tables: tuple[Table, ...]
+    combinable: tuple[tuple[str, str], ...] = ()   # declared pairs, in declaration order
 
     @property
     def tz(self) -> ZoneInfo:
@@ -79,6 +80,18 @@ class Restaurant:
             if table.id == table_id:
                 return table
         return None
+
+    def pair(self, table_ids) -> tuple[str, str] | None:
+        """The declared pair naming exactly these two tables, in its declared order."""
+        wanted = set(table_ids)
+        return next((p for p in self.combinable if set(p) == wanted), None)
+
+    def options(self) -> list[tuple[tuple[str, ...], int]]:
+        """Every seating option with its capacity: singles in fixture order, then pairs."""
+        capacity = {t.id: t.capacity for t in self.tables}
+        singles = [((t.id,), t.capacity) for t in self.tables]
+        pairs = [(p, capacity[p[0]] + capacity[p[1]]) for p in self.combinable]
+        return singles + pairs
 
     def hours_on(self, weekday: str) -> list[Hours]:
         return [h for h in self.opening_hours if h.weekday == weekday]
@@ -97,6 +110,7 @@ class Restaurant:
             "cancellation_cutoff_minutes": self.cutoff_minutes,
             "opening_hours": [h.to_json() for h in self.opening_hours],
             "tables": [t.to_json() for t in self.tables],
+            "combinable": [list(p) for p in self.combinable],
         }
 
 
@@ -147,11 +161,13 @@ class Reservation:
         return self.start < end and start < self.end
 
     def to_response(self, tz: ZoneInfo) -> dict:
+        tables = {"table_id": self.table_ids[0]} if len(self.table_ids) == 1 else {}
         return {
             "reservation_id": self.id,
             "reference": self.reference,
             "restaurant_id": self.restaurant_id,
-            "table_id": self.table_ids[0],
+            **tables,
+            "table_ids": list(self.table_ids),
             "party_size": self.party_size,
             "status": self.status,
             "starts_at_local": timeutil.format_local(self.local),
@@ -324,7 +340,15 @@ def restaurant_from_json(obj: dict) -> Restaurant:
     name = obj.get("name", rid)
     if not isinstance(name, str):
         raise ValueError("name must be a string")
-    return Restaurant(rid, name, tz_name, slot, duration, cutoff, tuple(hours), tuple(tables))
+    pairs = []
+    for entry in _list(obj, "combinable"):
+        if (not isinstance(entry, list) or len(entry) != 2 or entry[0] == entry[1]
+                or any(t not in seen for t in entry)):
+            raise ValueError("combinable entries are pairs of two of the restaurant's tables")
+        if set(entry) not in [set(p) for p in pairs]:
+            pairs.append((entry[0], entry[1]))
+    return Restaurant(rid, name, tz_name, slot, duration, cutoff, tuple(hours), tuple(tables),
+                      tuple(pairs))
 
 
 def _reservation_times(restaurant: Restaurant, starts_at_local: str):
@@ -341,9 +365,12 @@ def seeded_reservation(obj: dict, state: State, reset_at: datetime) -> Reservati
     restaurant = state.restaurants.get(_req(obj, "restaurant_id", str))
     if restaurant is None:
         raise ValueError("seeded reservation names an unknown restaurant")
-    table_id = _req(obj, "table_id", str)
-    if restaurant.table(table_id) is None:
-        raise ValueError("seeded reservation names an unknown table")
+    table_ids = (_req(obj, "table_ids", list) if "table_ids" in obj
+                 else [_req(obj, "table_id", str)])
+    table_ids = _table_set(restaurant, table_ids)
+    status = obj.get("status", CONFIRMED)
+    if status not in (CONFIRMED, CANCELLED):
+        raise ValueError("seeded status must be confirmed or cancelled")
     party_size = _req(obj, "party_size", int)
     if party_size < 1:
         raise ValueError("party_size must be at least 1")
@@ -355,9 +382,19 @@ def seeded_reservation(obj: dict, state: State, reset_at: datetime) -> Reservati
         created_at = timeutil.render(instant, instant.tzinfo)
     return Reservation(
         id=_id(obj, "id"), reference=_reference(obj), user_id=_id(obj, "user_id"),
-        restaurant_id=restaurant.id, table_ids=[table_id], party_size=party_size,
-        status=CONFIRMED, local=local, start=start, end=end, created_at=created_at,
+        restaurant_id=restaurant.id, table_ids=table_ids, party_size=party_size,
+        status=status, local=local, start=start, end=end, created_at=created_at,
         seq=state.take_seq())
+
+
+def _table_set(restaurant: Restaurant, table_ids: list) -> list[str]:
+    """A stored table set: one table, or two in their declared combination order."""
+    if (not 1 <= len(table_ids) <= 2 or len(set(table_ids)) != len(table_ids)
+            or any(not isinstance(t, str) or restaurant.table(t) is None for t in table_ids)):
+        raise ValueError("a reservation holds one table or two distinct tables")
+    if len(table_ids) == 2:
+        return list(restaurant.pair(table_ids) or table_ids)
+    return list(table_ids)
 
 
 def state_from_fixture(fixture: dict, hasher) -> State:
@@ -381,7 +418,8 @@ def state_from_fixture(fixture: dict, hasher) -> State:
 # ----------------------------------------------------------------------------- export/import
 
 STATE_SCHEMA = "tablekeeper-state"
-STATE_STAGE = 1
+STATE_STAGE = 2
+READABLE_STAGES = (1, 2)   # exports from the stage-1 service load unchanged: no combinable pairs
 
 
 def state_to_json(state: State) -> dict:
@@ -403,7 +441,7 @@ def state_to_json(state: State) -> dict:
 
 def state_from_json(obj: dict, valid_hash) -> State:
     """Rebuild exported state exactly; raises ValueError (or KeyError/TypeError) if invalid."""
-    if _req(obj, "schema", str) != STATE_SCHEMA or _req(obj, "stage", int) != STATE_STAGE:
+    if _req(obj, "schema", str) != STATE_SCHEMA or _req(obj, "stage", int) not in READABLE_STAGES:
         raise ValueError("state was not exported by this service")
     state = State()
     for item in _req(obj, "restaurants", list):
@@ -444,9 +482,7 @@ def _reservation_from_json(item: dict, state: State) -> Reservation:
     restaurant = state.restaurants.get(_req(item, "restaurant_id", str))
     if restaurant is None:
         raise ValueError("reservation at an unknown restaurant")
-    table_ids = _req(item, "table_ids", list)
-    if len(table_ids) != 1 or any(restaurant.table(t) is None for t in table_ids):
-        raise ValueError("reservation names an unknown table")
+    table_ids = _table_set(restaurant, _req(item, "table_ids", list))
     status = _req(item, "status", str)
     if status not in (CONFIRMED, CANCELLED):
         raise ValueError("unknown reservation status")

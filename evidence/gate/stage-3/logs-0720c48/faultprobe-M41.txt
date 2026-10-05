@@ -1,0 +1,6 @@
+FAILED test_41_history.py::test_entries_keep_their_terms_after_publication_and_amendment
+1 failed, 16 passed in 12.97s
+SUMMARY pass=168 fail=7 note=1 2.0s
+FAILED S3-027 real amendment adopts THU1 policy v4, revision 2 <200 b'{"reservation_id":"res_5","reference":"JJXGEEX1","restaurant_id":"r_pol","table_id":"p_2","table_ids":["p_2"],"party_size":3,"status":"confirmed","starts_at_local":"2026-11-12T19:00","starts_at":"2026-11-12T19:00:00+01:00","ends_at":"2026-11-12
+FAILED S3-013 entries carry resulting revision/terms; old entry keeps old terms
+FAILED S3-027 moving to THU2 adopts v3 terms and end time <200 b'{"reservation_id":"res_5","reference":"JJXGEEX1","restaurant_id":"r_pol","table_id":"p_3","table_ids":["p_3"],"party_size":2,"status":"confirmed","starts_at_local":"2026-11-19T20:00","starts_at":"2026-11-19T20:00:00+01:00","ends_at":"2026-11-19T21:3

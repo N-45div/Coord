@@ -1,0 +1,4 @@
+FAILED test_44_moves_policies.py::test_batch_touching_series_occurrences - As...
+1 failed, 102 passed in 139.10s (0:02:19)
+SUMMARY pass=174 fail=1 note=1 2.4s
+FAILED S3-049 batch: series revision +1 once, changed occurrences exceptions 6

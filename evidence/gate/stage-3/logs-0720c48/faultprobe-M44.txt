@@ -1,0 +1,6 @@
+FAILED test_43_series.py::test_occupancy_conflict_rejects_everything - Assert...
+1 failed, 73 passed in 54.24s
+SUMMARY pass=158 fail=3 note=1 2.1s
+FAILED S3-039 failed adoption leaves nothing
+FAILED S3-039 failed adoption's key is reusable <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that time"}}'>
+FAILED PROBE probe crashed: KeyError('reference')

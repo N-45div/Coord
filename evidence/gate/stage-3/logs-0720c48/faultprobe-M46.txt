@@ -1,0 +1,5 @@
+FAILED test_42_policies.py::test_expected_revision_stale_and_current - Assert...
+1 failed, 66 passed in 89.03s (0:01:29)
+SUMMARY pass=173 fail=2 note=1 2.2s
+FAILED S3-029 A-29: stale before cancelled: expected 409 stale_revision got <409 b'{"error":{"code":"reservation_cancelled","message":"the reservation is cancelled"}}'>
+FAILED S3-030 stale before cutoff: expected 409 stale_revision got <409 b'{"error":{"code":"cutoff_passed","message":"too close to the start to change or cancel"}}'>

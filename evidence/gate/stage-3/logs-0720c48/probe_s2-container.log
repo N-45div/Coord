@@ -1,0 +1,60 @@
+PASS S1-007 reset with combinable + seeded table_ids/status: expected 204  got <204 b''>
+NOTE S2-030 restaurant detail combinable -> [['t_1', 't_2'], ['t_3', 't_2']]
+PASS S2-033 party 2 options {'starts_at_local': '2026-11-12T19:00', 'starts_at': '2026-11-12T19:00:00+01:00', 'available_table_ids': ['t_1', 't_2', 't_3', 't_4'], 'availabl
+PASS S2-033 party 5 options (pairs only, combinable order) {'starts_at_local': '2026-11-12T19:00', 'starts_at': '2026-11-12T19:00:00+01:00', 'available_table_ids': [], 'ava
+PASS S2-033 party 9: options empty, slot present
+PASS S2-032 seeded pair+single block, cancelled seed frees t_3: {'starts_at_local': '2026-11-19T19:00', 'starts_at': '2026-11-19T19:00:00+01:00', 'available_table_ids': ['t
+PASS S2-032 seeded statuses
+PASS S2-035 seeded shapes [{'reservation_id': 'seed_one', 'reference': 'SEEDONE01', 'restaurant_id': 'r_anker', 'table_id': 't_4', 'table_ids': ['t_4'], 'party_size': 2, 's
+PASS S2-034 create pair given in reverse order: expected 201  got <201 b'{"reservation_id":"res_4","reference":"F1T5PBZ5","restaurant_id":"r_anker","table_ids":["t_1","t_2"
+PASS S2-035 pair response table_ids in combinable order, no table_id: {'reservation_id': 'res_4', 'reference': 'F1T5PBZ5', 'restaurant_id': 'r_anker', 'table_ids': ['t_1', 
+PASS S2-022/A-22 pair booking fields
+PASS S1-039 pair replay 200 identical
+PASS S2-037 pair occupies both members and every pair containing them: {'starts_at_local': '2026-11-12T19:00', 'starts_at': '2026-11-12T19:00:00+01:00', 'available_table_id
+PASS S2-037 single on member: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that time"}}'>
+PASS S2-037 other pair sharing t_2, overlapping: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that time"}
+PASS S2-037 pair back-to-back: expected 201  got <201 b'{"reservation_id":"res_5","reference":"07RFAOYU","restaurant_id":"r_anker","table_ids":["t_3","t_2"],"party_size":5,
+PASS S2-036 undeclared pair: expected 422 combination_not_allowed got <422 b'{"error":{"code":"combination_not_allowed","message":"only a declared pair of tables can be com
+PASS S2-036 3 tables: expected 422 combination_not_allowed got <422 b'{"error":{"code":"combination_not_allowed","message":"only a declared pair of tables can be combined"}
+PASS S2-036 duplicate id: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"table_ids must not repeat a table"}}'>
+PASS S2-036 empty set: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"table_ids must name at least one table"}}'>
+PASS S2-034 both table_id and table_ids: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"send either table_id or table_ids, not bo
+PASS S2-034 neither: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"missing required field: table_id or table_ids"}}'>
+PASS S2-036 table_ids not an array: expected 400 malformed_request got <400 b'{"error":{"code":"malformed_request","message":"table_ids must be an array of table id strings
+PASS S2-036 non-string members: expected 400 malformed_request got <400 b'{"error":{"code":"malformed_request","message":"table_ids must be an array of table id strings"}}'
+PASS S2-036 unknown member: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such table at this restaurant"}}'>
+PASS S2-036 member of another restaurant: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such table at this restaurant"}}'>
+PASS S2-038 party > sum: expected 422 party_exceeds_capacity got <422 b'{"error":{"code":"party_exceeds_capacity","message":"the party is larger than the seating"}}'>
+PASS S1-059 pair off grid: expected 422 not_on_slot_grid got <422 b'{"error":{"code":"not_on_slot_grid","message":"the start is not on the slot grid"}}'>
+PASS S2-031 party == summed capacity accepted: expected 201  got <201 b'{"reservation_id":"res_6","reference":"VTGAB6L5","restaurant_id":"r_anker","table_ids":["t_1","t_2"]
+PASS S2-034 table_ids with one member: expected 201  got <201 b'{"reservation_id":"res_7","reference":"PZ6D02Q2","restaurant_id":"r_anker","table_id":"t_4","table_ids":["t_
+PASS S2-035 single via table_ids carries table_id too: {'reservation_id': 'res_7', 'reference': 'PZ6D02Q2', 'restaurant_id': 'r_anker', 'table_id': 't_4', 'table_ids': ['t_
+NOTE A-20 3 tables incl unknown -> 404 not_found
+NOTE A-20 dup incl unknown -> 422 validation_failed
+NOTE A-20 undeclared pair off grid, party too big -> 422 combination_not_allowed
+PASS S2-035 GET pair shape <200 b'{"reservation_id":"res_6","reference":"VTGAB6L5","restaurant_id":"r_anker","table_ids":["t_1","t_2"],"party_size":6,"status":"confirmed","
+PASS S2-035 list entries carry table_ids (+table_id iff single)
+PASS S2-039 patch to undeclared pair: expected 422 combination_not_allowed got <422 b'{"error":{"code":"combination_not_allowed","message":"only a declared pair of tables c
+PASS S2-039 patch both fields: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"send either table_id or table_ids, not both"}}'>
+PASS S2-039 patch pair -> single <200 b'{"reservation_id":"res_6","reference":"VTGAB6L5","restaurant_id":"r_anker","table_id":"t_2","table_ids":["t_2"],"party_size":4,"stat
+PASS S2-039 patch released t_1 and kept t_2
+PASS S2-039 patch single -> pair (reverse order) <200 b'{"reservation_id":"res_6","reference":"VTGAB6L5","restaurant_id":"r_anker","table_ids":["t_3","t_2"],"party_size":7,
+PASS S2-038 patch party above pair sum: expected 422 party_exceeds_capacity got <422 b'{"error":{"code":"party_exceeds_capacity","message":"the party is larger than the sea
+PASS S2-039 cancel pair <200 b'{"reservation_id":"res_6","reference":"VTGAB6L5","restaurant_id":"r_anker","table_ids":["t_3","t_2"],"party_size":7,"status":"cancelled","sta
+PASS S2-039 cancel frees every member
+PASS S2-040 moves swap pair<->single via table_ids <201 b'{"reservations":[{"reservation_id":"res_8","reference":"D5CE4BCJ","restaurant_id":"r_anker","table_ids":["t_3","t_
+PASS S1-104 moves replay
+PASS S2-040 move pair onto member held by unlisted B: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that t
+PASS S2-040 move to undeclared pair: expected 422 combination_not_allowed got <422 b'{"error":{"code":"combination_not_allowed","message":"only a declared pair of tables ca
+PASS S2-040 chain: B frees t_1, A takes t_1+t_2: expected 201  got <201 b'{"reservations":[{"reservation_id":"res_9","reference":"2W3WXQYR","restaurant_id":"r_anker","table
+PASS S2-041 pair vs single race wins pair=0 t1=1 t2=1 other=[]
+PASS S2-041 state matches the winners, no table double-booked: {'t_2': [('2026-12-03T19:30:00+01:00', '2026-12-03T21:00:00+01:00')], 't_1': [('2026-12-03T19:00:00+01:00', '
+PASS S2-042 export
+PASS S2-042 import stage-2 export: expected 204  got <204 b''>
+PASS S2-042 pair bookings round-trip
+PASS S2-042 pair receipt replays after import
+PASS S2-042 imported pair still occupies
+PASS S2-042 import into fresh instance: expected 204  got <204 b''>
+PASS S2-042 fresh instance: pair replay
+PASS S1-006 5xx: []
+SUMMARY pass=55 fail=0 note=4 1.3s

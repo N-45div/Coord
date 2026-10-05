@@ -1,0 +1,6 @@
+FAILED test_42_policies.py::test_policy_selection_by_local_date - AssertionEr...
+1 failed, 55 passed in 108.67s (0:01:48)
+SUMMARY pass=150 fail=11 note=1 2.0s
+FAILED S3-021 2026-11-19: first slot 2026-11-19T17:00, policy_version {1} (want 3, 18:00)
+FAILED S3-021 2026-11-26: first slot 2026-11-26T17:00, policy_version {1} (want 3, 18:00)
+FAILED S3-022 THU2 v3 opens 18:00 (v1 would allow): expected 422 outside_opening_hours got <201 b'{"reservation_id":"res_8","reference":"UNKYVY4N","restaurant_id":"r_pol","table_id":"p_3","table_ids":["p_3"],"party_size":2,"status":"confirmed","starts_at_local":"2026-11-19T17:00","starts_at":"2026-11-19T17:00:00+

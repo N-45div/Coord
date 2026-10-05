@@ -1,0 +1,4 @@
+FAILED test_41_history.py::test_changed_noop_cancelled_and_replay - assert [1...
+1 failed, 12 passed in 13.55s
+SUMMARY pass=174 fail=1 note=1 3.1s
+FAILED S3-013 entries carry resulting revision/terms; old entry keeps old terms

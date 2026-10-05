@@ -1,0 +1,87 @@
+{
+  "revision": "",
+  "track": "tablekeeper",
+  "stages": {
+    "1": "pass",
+    "2": "pass"
+  },
+  "highest_contiguous": 2,
+  "started_at": "2026-10-05T19:42:30.257854+00:00",
+  "finished_at": "2026-10-05T19:45:09.480794+00:00",
+  "schema_version": 2,
+  "run_id": "b37842f398b44d999cf05a593072b902",
+  "mode": "isolated",
+  "provenance": "working-tree",
+  "state": "completed",
+  "pytest_args": [],
+  "suite_digest": "f98962753222bf04eae211beb9e8bf8b9f3edd062beeb55ae857391365a6fb83",
+  "checks": {
+    "1": {
+      "collected": 120,
+      "passed": 120,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "deselected": 0,
+      "xfailed": 0,
+      "files": {
+        "stage_1/test_health_reset_auth.py": {
+          "passed": 12,
+          "total": 12
+        },
+        "stage_1/test_reservations.py": {
+          "passed": 37,
+          "total": 37
+        },
+        "stage_1/test_restaurants_availability.py": {
+          "passed": 18,
+          "total": 18
+        },
+        "stage_1/test_retries_time_input.py": {
+          "passed": 20,
+          "total": 20
+        },
+        "stage_1/test_sample.py": {
+          "passed": 20,
+          "total": 20
+        },
+        "stage_1/test_seeded_state.py": {
+          "passed": 13,
+          "total": 13
+        }
+      }
+    },
+    "2": {
+      "collected": 25,
+      "passed": 25,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "deselected": 0,
+      "xfailed": 0,
+      "files": {
+        "stage_2/test_sample.py": {
+          "passed": 8,
+          "total": 8
+        },
+        "stage_2/test_ui.py": {
+          "passed": 17,
+          "total": 17
+        }
+      }
+    }
+  },
+  "overshoot": null,
+  "claimed_stage": "2",
+  "share": 1.0,
+  "upgrade_sources": {
+    "2": {
+      "folder": "/mnt/c/Users/DivijN/dark-factory/band-work/scratch/gate/0720c48/stage-1",
+      "revision": ""
+    },
+    "3": {
+      "folder": "/mnt/c/Users/DivijN/dark-factory/band-work/scratch/gate/0720c48/stage-2",
+      "revision": ""
+    }
+  }
+}

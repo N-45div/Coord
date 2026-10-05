@@ -61,6 +61,8 @@ installed (`pip install tzdata==2025.3`) on hosts that have no system zoneinfo.
 - One page shell is served for every screen route; `app.js` renders the screen for the path
   and navigates in-page, so the booking form, its pending retry key and the session survive
   anything that happens on the server between requests (including an export/import).
+- The page shell embeds the current restaurant list as a JSON data block, so the search
+  form is complete when the page loads; the client refreshes the list on every visit.
 - The session token is kept in `localStorage`; tokens survive import, so a signed-in browser
   stays signed in after an upgrade.
 - Searches are numbered; a response for anything but the newest search is dropped, so a late

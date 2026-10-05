@@ -5,6 +5,7 @@ external resource.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -36,9 +37,19 @@ def _load() -> dict[str, Asset]:
 ASSETS = _load()
 
 
-def screen() -> Asset:
-    """The shell every screen route returns; the client renders the screen for its path."""
-    return ASSETS["index.html"]
+_RESTAURANTS_SLOT = b"<!--tablekeeper:restaurants-->"
+
+
+def screen(restaurants: list[dict]) -> Asset:
+    """The shell every screen route returns; the client renders the screen for its path.
+
+    The current restaurant list is embedded as a JSON data block, so the search form is
+    complete as soon as the page has loaded; the client still refreshes it.
+    """
+    data = json.dumps(restaurants, ensure_ascii=False).replace("<", "\\u003c")
+    block = f'<script type="application/json" id="restaurants-data">{data}</script>'
+    shell = ASSETS["index.html"]
+    return Asset(shell.body.replace(_RESTAURANTS_SLOT, block.encode("utf-8")), shell.content_type)
 
 
 def asset(name: str) -> Asset | None:

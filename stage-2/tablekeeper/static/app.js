@@ -263,8 +263,18 @@
 
   // ------------------------------------------------------------------ search and booking
 
+  /** The restaurant list the server embedded in the page, or null. */
+  function embeddedRestaurants() {
+    try {
+      const data = JSON.parse(document.getElementById("restaurants-data").textContent);
+      return Array.isArray(data) ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
   const search = {
-    restaurants: null,        // [{id, name, timezone}] once loaded
+    restaurants: embeddedRestaurants(),   // [{id, name, timezone}]; refreshed on each visit
     restaurantsFailed: false,
     form: { restaurantId: "", date: todayIso(), party: "2" },
     seq: 0,                   // the newest search owns the screen; older responses are dropped
@@ -454,7 +464,8 @@
       el("h2", { class: "results__title" }, `${detail.name} · ${formatDate(params.date)}`),
       el("p", { class: "results__meta" },
         refreshing ? "Updating availability…"
-          : `Party of ${party} · ${open} of ${slots.length} times with a free table · times are local to the restaurant`));
+          : slots.length ? `Party of ${party} · ${open} of ${slots.length} times with a free table · times are local to the restaurant`
+            : `Party of ${party} · no bookable times on this day`));
     if (!slots.length) {
       return [head, el("div", { class: "empty", testid: "no-slots" },
         el("h3", {}, "No tables on this day"),
@@ -595,6 +606,12 @@
       booking.confirmation ? confirmationView(booking.confirmation) : null);
   }
 
+  /** Bring a new confirmation into view; on a phone it sits below a long grid. */
+  function showConfirmation() {
+    const box = document.querySelector("[data-testid='confirmation']");
+    if (box) box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
   function confirmationView({ reservation, restaurantName, labels }) {
     const tableIds = reservation.table_ids || [reservation.table_id];
     const seating = seatingName(tableIds, labels);
@@ -659,6 +676,7 @@
       booking.error = null;
       booking.confirmation = { reservation: result.data, restaurantName: selection.restaurantName, labels: selection.labels };
       renderBooking();
+      showConfirmation();
       refreshAvailability();
       return;
     }

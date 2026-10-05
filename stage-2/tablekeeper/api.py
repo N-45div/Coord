@@ -161,6 +161,11 @@ class Api:
 
     # ------------------------------------------------------------------ public browsing (§8)
 
+    def restaurant_summaries(self) -> list[dict]:
+        """The restaurant list the page shell embeds (same content as GET /restaurants)."""
+        with self.store.lock:
+            return [r.summary() for r in self.store.state.restaurants.values()]
+
     def restaurants(self, req: Request) -> Response:
         with self.store.lock:
             items = [r.summary() for r in self.store.state.restaurants.values()]

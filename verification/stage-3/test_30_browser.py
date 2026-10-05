@@ -593,3 +593,19 @@ def test_signed_in_browser_and_pending_retry_survive_export_import(uw, page, api
     T(page, "lookup-submit").click()
     ui.wait_visible(page, "reservation-detail")
     assert ui.text(page, "reservation-status") == "confirmed"
+
+
+@pytest.mark.ledger("S2-005", "A-46")
+def test_restaurant_select_holds_only_ids_at_load(uw, browser):
+    """A-46: at the page's load event restaurant-select already holds only restaurant ids (no
+    placeholder option such as "Loading..." with value ""). Checked on several fresh page loads."""
+    ids = {r["id"] for r in uw.fx["restaurants"]}
+    for i in range(4):
+        ctx, page = _page(browser)
+        try:
+            page.goto(ui.url("/"), wait_until="load")
+            values = T(page, "restaurant-select").locator("option").evaluate_all("os => os.map(o => o.value)")
+        finally:
+            ctx.close()
+        assert set(values) == ids and len(values) == len(ids), \
+            f"load {i + 1}: restaurant-select options at load are {values!r}, expected exactly {sorted(ids)}"

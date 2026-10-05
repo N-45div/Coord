@@ -1,0 +1,177 @@
+PASS S1-007 reset with manager_user_ids + seeds: expected 204  got <204 b''>
+PASS S3-001 explain='false': expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"explain accepts only the value true"}}'>
+PASS S3-001 explain='1': expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"explain accepts only the value true"}}'>
+PASS S3-001 explain='TRUE': expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"explain accepts only the value true"}}'>
+PASS S3-001 explain='': expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"explain accepts only the value true"}}'>
+PASS S3-001 explain='yes': expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"explain accepts only the value true"}}'>
+PASS S3-002 no explain fields without param
+PASS S3-003 explain lists every table once in fixture order with both rules: [{'table_id': 'p_1', 'policy_version': 0, 'available': True, 'rules': [{'rule': 'capa
+PASS S3-006 policy_version 0 before publications
+PASS S1-055 create R1: expected 201  got <201 b'{"reservation_id":"res_5","reference":"AI0FNLG0","restaurant_id":"r_pol","table_id":"p_2","table_ids":["p_2"],"par
+PASS S3-023 R1 revision 1, terms policy 0: {'reservation_id': 'res_5', 'reference': 'AI0FNLG0', 'restaurant_id': 'r_pol', 'table_id': 'p_2', 'table_ids': ['p_2'],
+PASS S3-008 R1 created: events/seq/at [{'seq': 1, 'at': '2026-10-05T22:31:44+02:00', 'event': 'created', 'changes': [{'field': 'table_id', 'from': None, 'to': 'p_
+PASS S3-009 created changes: [{'seq': 1, 'at': '2026-10-05T22:31:44+02:00', 'event': 'created', 'changes': [{'field': 'table_id', 'from': None, 'to': 'p_2'}, {'fi
+PASS S3-013 created entry revision+terms
+PASS S3-012 replay records nothing
+PASS S3-024 seeded rev 1 policy 0: {'reservation_id': 's_a', 'reference': 'SEEDA0001', 'restaurant_id': 'r_pol', 'table_id': 'p_3', 'table_ids': ['p_3'], 'party_s
+NOTE A-43 seeded cancelled history: [('created', 1, [{'field': 'table_id', 'from': None, 'to': 'p_3'}, {'field': 'starts_at_local', 'from': None, 'to': '2026-12-10T21:00'}, {'field': 'party_size', 'from': None, 'to': 2}]), ('cancelled', 1, [])]
+PASS S3-015 no token: expected 401 unauthenticated got <401 b'{"error":{"code":"unauthenticated","message":"a valid bearer token is required"}}'>
+PASS S3-015 non-manager: expected 403 forbidden got <403 b'{"error":{"code":"forbidden","message":"only this restaurant\'s managers may publish policies"}}'>
+PASS S3-015 manager of another restaurant: expected 403 forbidden got <403 b'{"error":{"code":"forbidden","message":"only this restaurant\'s managers may publish 
+PASS S3-015 unknown restaurant: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such restaurant"}}'>
+PASS S3-015 no key: expected 400 missing_idempotency_key got <400 b'{"error":{"code":"missing_idempotency_key","message":"Idempotency-Key header is required"}}'>
+PASS S3-015 long key: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"Idempotency-Key must be at most 255 characters"}}'
+PASS S3-016 missing effective_from: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"effective_from must be a YYYY-MM-DD 
+PASS S3-016 missing capacities: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"capacities must name exactly the restaur
+PASS S3-016 bad date: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"effective_from is not a real date"}}'>
+PASS S3-016 date format: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"effective_from must be YYYY-MM-DD"}}'>
+PASS S3-016 slot 0: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"slot_minutes must be an integer from 1 to 1440"}}'>
+PASS S3-016 slot 1441: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"slot_minutes must be an integer from 1 to 1440"}}
+PASS S3-016 slot bool: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"slot_minutes must be an integer from 1 to 1440"}}
+PASS S3-016 slot string: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"slot_minutes must be an integer from 1 to 1440"
+PASS S3-016 slot fraction: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"slot_minutes must be an integer from 1 to 144
+PASS S3-016 duration 1441: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"reservation_duration_minutes must be an integ
+PASS S3-016 cutoff -1: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"cancellation_cutoff_minutes must be an integer fr
+PASS S3-016 cutoff 10081: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"cancellation_cutoff_minutes must be an integer
+PASS S3-016 dup weekday: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"invalid opening_hours: duplicate weekday thu"}}
+PASS S3-016 closes<=opens: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"invalid opening_hours: closes must be later t
+PASS S3-016 bad weekday: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"invalid opening_hours: opening_hours entries ne
+PASS S3-016 bad HH:MM: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"invalid opening_hours: \'18:60\' is not HH:MM"}}'
+PASS S3-016 caps missing table: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"capacities must name exactly the restaur
+PASS S3-016 caps extra table: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"capacities must name exactly the restauran
+PASS S3-016 caps 0: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"capacity of p_1 must be an integer from 1 to 100"}}'
+PASS S3-016 caps 101: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"capacity of p_1 must be an integer from 1 to 100"}
+PASS S3-016 caps string: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"capacity of p_1 must be an integer from 1 to 10
+PASS S3-016 caps bool: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"capacity of p_1 must be an integer from 1 to 100"
+PASS S3-016 hours not list: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"invalid opening_hours: opening_hours must be
+PASS S3-017 no version allocated by failures: <200 b'{"policies":[]}'>
+PASS S3-017 publish v1: <201 b'{"effective_from":"2026-11-19","slot_minutes":60,"reservation_duration_minutes":120,"cancellation_cutoff_minutes":60,"opening_hours
+PASS S3-015 policy replay 200 identical, no new version
+PASS S3-015 policy key reuse: expected 409 idempotency_key_reuse got <409 b'{"error":{"code":"idempotency_key_reuse","message":"this Idempotency-Key was used with
+PASS S3-017 publish v2: <201 b'{"effective_from":"2026-12-03","slot_minutes":30,"reservation_duration_minutes":60,"cancellation_cutoff_minutes":0,"opening_hours":
+PASS S3-017 publish v3: <201 b'{"effective_from":"2026-11-19","slot_minutes":30,"reservation_duration_minutes":90,"cancellation_cutoff_minutes":30,"opening_hours"
+PASS S3-017 publish v4: <201 b'{"effective_from":"2026-01-01","slot_minutes":30,"reservation_duration_minutes":90,"cancellation_cutoff_minutes":120,"opening_hours
+PASS S3-019 list in publication order: <200 b'{"policies":[{"effective_from":"2026-11-19","slot_minutes":60,"reservation_duration_minutes":120,"cancellation_cutof
+PASS S3-019 unknown restaurant policies: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such restaurant"}}'>
+PASS S3-020 restaurant detail keeps fixture config
+PASS S3-017 versions independent per restaurant: <201 b'{"effective_from":"2026-10-06","slot_minutes":15,"reservation_duration_minutes":15,"cancellation_cutoff_mi
+PASS S3-025 existing booking untouched by publications
+PASS S3-021 2025-12-04: first slot 2025-12-04T17:00, policy_version {0} (want 0, 17:00)
+PASS S3-021 2026-11-12: first slot 2026-11-12T17:00, policy_version {4} (want 4, 17:00)
+PASS S3-021 2026-11-19: first slot 2026-11-19T18:00, policy_version {3} (want 3, 18:00)
+PASS S3-021 2026-11-26: first slot 2026-11-26T18:00, policy_version {3} (want 3, 18:00)
+PASS S3-021 2026-12-03: first slot 2026-12-03T18:00, policy_version {2} (want 2, 18:00)
+PASS S3-022 THU4 grid under v2 (60-min duration, closes 22:00): ['18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00']
+PASS S3-004 THU1 party 4 @18:00 under v4 (p_3 cap 3; p_2 booked 19:00): {'p_1': {'table_id': 'p_1', 'policy_version': 4, 'available': False, 'rules': [{'rule': 'c
+PASS S3-004 table failing both: [{'table_id': 'p_1', 'policy_version': 4, 'available': False, 'rules': [{'rule': 'capacity', 'holds': False}, {'rule': 'no_overlap
+PASS S3-004 available == both rules hold, and equals available_table_ids in order
+PASS S3-005 closed day slots []
+PASS S3-022 THU4 v2: p_1 cap 3, 60-min duration <201 b'{"reservation_id":"res_7","reference":"OROWQMQO","restaurant_id":"r_pol","table_id":"p_1","table_ids":["p_1
+PASS S3-022 THU1 v4 p_1 cap 2: expected 422 party_exceeds_capacity got <422 b'{"error":{"code":"party_exceeds_capacity","message":"the party is larger than the se
+PASS S3-022 THU2 v3 opens 18:00 (v1 would allow): expected 422 outside_opening_hours got <422 b'{"error":{"code":"outside_opening_hours","message":"the booking is
+PASS S3-022 THU2 18:30 on v3 grid (v1 grid 60) <201 b'{"reservation_id":"res_8","reference":"DI4QNKQO","restaurant_id":"r_pol","table_id":"p_3","table_ids":["p_3"
+PASS S3-047 pair capacity = v2 caps 3+4 = 7 (fixture sum 6) <201 b'{"reservation_id":"res_9","reference":"NE88KUGI","restaurant_id":"r_pol","table_ids":["p_1","p_
+PASS S3-028 no-op PATCH keeps revision/terms, no history <200 b'{"reservation_id":"res_5","reference":"AI0FNLG0","restaurant_id":"r_pol","table_id":"p_2","table_i
+PASS S3-027 real amendment adopts THU1 policy v4, revision 2 <200 b'{"reservation_id":"res_5","reference":"AI0FNLG0","restaurant_id":"r_pol","table_id":"p_2","tab
+PASS S3-010 changed entry names only party_size: {'seq': 2, 'at': '2026-10-05T22:31:44+02:00', 'event': 'changed', 'changes': [{'field': 'party_size', 'from': 4, 
+PASS S3-013 entries carry resulting revision/terms; old entry keeps old terms
+PASS S3-010 two fields in order table_id, starts_at_local: {'seq': 3, 'at': '2026-10-05T22:31:44+02:00', 'event': 'changed', 'changes': [{'field': 'table_id', 'fr
+PASS S3-030 expected_revision=0: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive in
+PASS S3-030 expected_revision=-1: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive i
+PASS S3-030 expected_revision=True: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive
+PASS S3-030 expected_revision='3': expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive 
+PASS S3-030 expected_revision=3.5: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive 
+PASS S3-030 expected_revision=None: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive
+PASS S3-030 stale expected_revision: expected 409 stale_revision got <409 b'{"error":{"code":"stale_revision","message":"the reservation has changed since that re
+PASS S3-030 stale before validation: expected 409 stale_revision got <409 b'{"error":{"code":"stale_revision","message":"the reservation has changed since that re
+PASS S3-030 matching expected_revision works <200 b'{"reservation_id":"res_5","reference":"AI0FNLG0","restaurant_id":"r_pol","table_id":"p_3","table_ids":["p_3"],
+PASS S3-029 failed amendment changes nothing
+PASS S3-027 moving to THU2 adopts v3 terms and end time <200 b'{"reservation_id":"res_5","reference":"AI0FNLG0","restaurant_id":"r_pol","table_id":"p_3","table_id
+PASS S3-026 cancel revision+1, cancelled entry <200 b'{"reservation_id":"res_5","reference":"AI0FNLG0","restaurant_id":"r_pol","table_id":"p_3","table_ids":["p_3"
+PASS S3-026 repeat cancel no change
+PASS S3-008 R1 full history: events/seq/at [{'seq': 1, 'at': '2026-10-05T22:31:44+02:00', 'event': 'created', 'changes': [{'field': 'table_id', 'from': None, 'to'
+PASS S3-029 A-29: stale before cancelled: expected 409 stale_revision got <409 b'{"error":{"code":"stale_revision","message":"the reservation has changed since th
+PASS S1-077 patch cancelled: expected 409 reservation_cancelled got <409 b'{"error":{"code":"reservation_cancelled","message":"the reservation is cancelled"}}'>
+PASS S3-032 decision after cancel <200 b'{"reference":"AI0FNLG0","revision":6,"accepted_terms":{"policy_version":3,"slot_minutes":30,"reservation_duration_minutes
+PASS S3-007 history other user: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-032 decision other user: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-007 history no token: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-032 decision no token: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-007 history manager: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-032 decision manager: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-007 unknown history: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-033 manager cannot read diner booking: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-024 old key replays original revision 1 and policy-0 terms
+PASS S3-047 pair created uses table_ids: [{'seq': 1, 'at': '2026-10-05T22:31:45+02:00', 'event': 'created', 'changes': [{'field': 'table_ids', 'from': None, 'to':
+PASS S3-047 reversed pair is a no-op
+PASS S3-047 pair -> single uses table_ids lists: {'seq': 2, 'at': '2026-10-05T22:31:45+02:00', 'event': 'changed', 'changes': [{'field': 'table_ids', 'from': ['p_
+PASS S3-047 single->single table_id: {'seq': 3, 'at': '2026-10-05T22:31:45+02:00', 'event': 'changed', 'changes': [{'field': 'table_id', 'from': 'p_3', 'to': 'p_2
+PASS S3-027 old accepted cutoff 0 allows the amendment; new terms cutoff 120: <200 b'{"reservation_id":"s_n","reference":"SEEDN0001","restaurant_id":"r_now","tabl
+PASS S3-026 after adopting cutoff-120 terms, cancel near booking refused: expected 409 cutoff_passed got <409 b'{"error":{"code":"cutoff_passed","message":"too cl
+PASS S3-026 accepted cutoff 0 wins over current 120: <200 b'{"reservation_id":"s_n2","reference":"SEEDN0002","restaurant_id":"r_now","table_id":"n_2","table_ids":
+PASS S3-026 C cutoff 120: expected 409 cutoff_passed got <409 b'{"error":{"code":"cutoff_passed","message":"too close to the start to change or cancel"}}'>
+PASS S3-021 same-date policy v2 supersedes
+PASS S3-026 C keeps accepted cutoff 120: expected 409 cutoff_passed got <409 b'{"error":{"code":"cutoff_passed","message":"too close to the start to change or can
+PASS S3-027 old accepted cutoff: expected 409 cutoff_passed got <409 b'{"error":{"code":"cutoff_passed","message":"too close to the start to change or cancel"}}'>
+PASS S3-030 stale before cutoff: expected 409 stale_revision got <409 b'{"error":{"code":"stale_revision","message":"the reservation has changed since that revisi
+PASS S3-035 series anchor within accepted cutoff: expected 409 cutoff_passed got <409 b'{"error":{"code":"cutoff_passed","message":"too close to the start to chan
+PASS S3-026 booking under same-date v2 (cutoff 0) cancellable: <200 b'{"reservation_id":"res_12","reference":"9Y9NJVHM","restaurant_id":"r_now","table_id":"n_4","
+PASS S3-040 adopt series: expected 201  got <201 b'{"series_id":"ser_1","revision":1,"interval_weeks":1,"occurrences":[{"index":0,"reference":"UYKU46MF","exceptio
+PASS S3-040 series shape {'series_id': 'ser_1', 'revision': 1, 'interval_weeks': 1, 'occurrences': [{'index': 0, 'reference': 'UYKU46MF', 'exception': False, 'res
+PASS S3-036 occurrence 0 is the unchanged anchor
+PASS S3-037 dates +7 days, same local time, table and party
+PASS S3-038 each occurrence selects its own date's policy
+PASS S3-041 occurrences are ordinary listed reservations with history
+PASS S3-041 occurrences occupy tables
+PASS S3-036 anchor's original idempotent response unchanged
+PASS S3-045 series replay 200 identical
+PASS S3-034 series key reuse: expected 409 idempotency_key_reuse got <409 b'{"error":{"code":"idempotency_key_reuse","message":"this Idempotency-Key was used with
+PASS S3-042 GET series equals creation response before changes <200 b'{"series_id":"ser_1","revision":1,"interval_weeks":1,"occurrences":[{"index":0,"reference":"
+PASS S3-042 series other user: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such series"}}'>
+PASS S3-042 series no token: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such series"}}'>
+PASS S3-042 unknown series: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such series"}}'>
+PASS S3-043 real PATCH -> exception, series rev 2: 2
+PASS S3-043 no-op and failed PATCH change nothing
+PASS S3-044 cancel: rev 3 once, kept, no exception 3
+PASS S3-044 anchor cancel does not cancel siblings
+PASS S3-045 replay after changes returns original, changes no counter
+PASS S3-035 occurrence already in a series: expected 409 already_in_series got <409 b'{"error":{"code":"already_in_series","message":"the reservation already belo
+PASS S3-035 cancelled anchor: expected 409 reservation_cancelled got <409 b'{"error":{"code":"reservation_cancelled","message":"the reservation is cancelled"}}'>
+PASS S3-034 series no token: expected 401 unauthenticated got <401 b'{"error":{"code":"unauthenticated","message":"a valid bearer token is required"}}'>
+PASS S3-034 series no key: expected 400 missing_idempotency_key got <400 b'{"error":{"code":"missing_idempotency_key","message":"Idempotency-Key header is require
+PASS S3-034 count 1: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"count must be an integer from 2 to 12"}}'>
+PASS S3-034 count 13: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"count must be an integer from 2 to 12"}}'>
+PASS S3-034 count bool: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"count must be an integer from 2 to 12"}}'>
+PASS S3-034 count string: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"count must be an integer from 2 to 12"}}'>
+PASS S3-034 count fraction: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"count must be an integer from 2 to 12"}}'>
+PASS S3-034 interval 0: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"interval_weeks must be an integer from 1 to 4"}}
+PASS S3-034 interval 5: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"interval_weeks must be an integer from 1 to 4"}}
+PASS S3-034 interval bool: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"interval_weeks must be an integer from 1 to 4
+PASS S3-034 anchor missing: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"anchor_reference must be a reservation refer
+PASS S3-034 anchor int: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"anchor_reference must be a reservation reference
+PASS S3-035 unknown anchor: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-035 another owner's anchor: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such reservation"}}'>
+PASS S3-039 occ2 conflict (index order) beats occ3 outside hours: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the ta
+PASS S3-039 failed adoption leaves nothing
+PASS S3-039 failed adoption's key is reusable <201 b'{"series_id":"ser_2","revision":1,"interval_weeks":1,"occurrences":[{"index":0,"reference":"Z9TIFIU2","except
+PASS S3-038 occ3 under v2 ends after 22:00: expected 422 outside_opening_hours got <422 b'{"error":{"code":"outside_opening_hours","message":"the booking is outsi
+PASS S3-038 occ1 in spring-forward gap rejects adoption: expected 422 invalid_local_time got <422 b'{"error":{"code":"invalid_local_time","message":"that local ti
+PASS S3-038 repeated time resolves to first occurrence <201 b'{"series_id":"ser_3","revision":1,"interval_weeks":1,"occurrences":[{"index":0,"reference":"7I2G6KVW
+PASS S3-037 pair series <201 b'{"series_id":"ser_4","revision":1,"interval_weeks":1,"occurrences":[{"index":0,"reference":"7L1PPTD6","exception":false,"reservatio
+PASS S3-048 moved booking adopts v2, no-op keeps revision <201 b'{"reservations":[{"reservation_id":"res_27","reference":"RHT5WR2G","restaurant_id":"r_pol","table
+PASS S3-049 one changed entry per changed booking, none for no-op
+PASS S3-050 moves replay changes nothing
+PASS S3-048 per-move stale expected_revision: expected 409 stale_revision got <409 b'{"error":{"code":"stale_revision","message":"the reservation has changed sinc
+PASS S3-050 failed batch changes no revision/history
+PASS S3-048 per-move invalid expected_revision: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must b
+PASS S3-049 batch: series revision +1 once, changed occurrences exceptions 5
+PASS S3-031 concurrent same expected_revision: [200, 409, 409, 409, 409, 409, 409, 409, 409, 409]
+PASS S3-051 stage-3 import: expected 204  got <204 b''>
+PASS S3-051 policies, history, decision, series, reservations round-trip
+PASS S3-051 series receipt survives import
+PASS S3-051 policy receipt survives import
+PASS S3-051 version counter continues after import
+PASS S3-051 import into fresh instance: expected 204  got <204 b''>
+PASS S3-051 fresh instance history
+PASS S1-006 5xx: []
+SUMMARY pass=175 fail=0 note=1 2.0s

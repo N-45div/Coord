@@ -1,0 +1,4 @@
+FAILED test_51_apply.py::test_apply_moves_bookings_and_records_history - asse...
+1 failed, 33 passed, 3 deselected in 14.32s
+SUMMARY pass=89 fail=1 note=0 2.3s
+FAILED S4-017 moved 0Z9XVRKT: {'seq': 3, 'at': '2026-10-05T22:57:18+02:00', 'event': 'reassigned', 'changes': [{'field': 'table_ids', 'from': ['t_2'], 'to': ['t_6']}], 'plan_id': 'plan_9', 'revision': 2, 'accepted_terms': {'policy_version': 0, 'slot_minutes': 30, 'reservation_duration_minutes': 90, 'cancellation_

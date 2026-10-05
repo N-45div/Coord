@@ -1,0 +1,251 @@
+PASS S1-004 <200 b'{"status":"ok"}'>
+PASS S1-007 reset: expected 204  got 204 None b''
+PASS S1-007 reset 204 has empty body
+PASS S1-026 unknown route: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such endpoint"}}'
+PASS S1-047 <200 b'{"restaurants":[{"id":"r_anker","name":"Zum Anker","timezone":"Europe/Berlin"},{"id":"r_night","name":"Nacht","ti
+PASS S1-048 <200 b'{"id":"r_anker","name":"Zum Anker","timezone":"Europe/Berlin","slot_minutes":30,"reservation_duration_minutes":90
+PASS S1-048 unknown restaurant: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such restauran
+PASS S1-012 64-char restaurant id <200 b'{"id":"r_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","name":"Long","tim
+PASS S1-027 <201 b'{"user_id":"u_3","display_name":"Cy","token":"OSwBjv0dRzjLbibmBbByFPCrBn_bLDt-skVqDuxiy_M"}'>
+PASS S1-012 user_id <= 64
+PASS S1-027 signup token works
+PASS S1-029 dup seeded email: expected 409 email_taken got 409 email_taken b'{"error":{"code":"email_taken","message":"an account wi
+NOTE A-10 case-variant duplicate signup -> 409 email_taken
+PASS S1-030 7-char pw: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message":"pa
+PASS S1-031 email 'noat': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message":
+PASS S1-031 email 'a@': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message":"e
+PASS S1-031 email '@b.com': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message
+PASS S1-031 email 'a@b@c.com': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","mess
+PASS S1-031 email 'a b@c.com': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","mess
+PASS S1-031 email '': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message":"ema
+PASS S1-033 email wrong type: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request","messa
+PASS S1-033 email missing: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message"
+PASS S1-033 login pw missing: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messa
+PASS S1-020 login bad json: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request","message
+PASS S1-014 <200 b'{"user_id":"u_ada","display_name":"Ada","token":"OOEBCOl6qKAJzgFVJBOGyHr5uJNW8P3G_IzlbgaMB6U"}'>
+PASS S1-035 two tokens both valid
+PASS S1-032 wrong pw: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","message":"wrong ema
+PASS S1-032 unknown email: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","message":"wron
+PASS S1-034 auth hdr {}: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","message":"a vali
+PASS S1-034 auth hdr {'Authorization': 'Bearer'}: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthent
+PASS S1-034 auth hdr {'Authorization': 'Bearer nope'}: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unau
+PASS S1-034 auth hdr {'Authorization': 'Basic abc'}: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauth
+PASS S1-034 auth hdr {'Authorization': 'OOEBCOl6qKAJzgFVJBOGyHr5uJNW8P3G_IzlbgaMB6U'}: expected 401 unauthenticated got 401 unauthen
+PASS S1-051 <200 b'{"restaurant_id":"r_anker","date":"2026-10-15","timezone":"Europe/Berlin","slots":[{"starts_at_local":"2026-10-15
+PASS S1-050 <200 b'{"restaurant_id":"r_anker","date":"2026-10-15","timezone":"Europe/Berlin","slots":[{"starts_at_local":"2026-10-15
+PASS S1-052 seeded bob t_2 21:30 blocks 20:30+
+PASS S1-052 party 5: slots present, empty lists
+PASS S1-051 fri closes 23:30 -> last slot 22:00
+PASS S1-053 closed wed
+PASS S1-084 winter offset
+PASS S1-049 missing param date=2026-10-15&party_size=2: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":
+PASS S1-049 missing param restaurant_id=r_anker&party_size=2: expected 422 validation_failed got 422 validation_failed b'{"error":{"
+PASS S1-049 missing param restaurant_id=r_anker&date=2026-10-15: expected 422 validation_failed got 422 validation_failed b'{"error"
+PASS S1-024 party_size='4.0': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messa
+PASS S1-024 party_size='+4': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messag
+PASS S1-024 party_size='1e9': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messa
+PASS S1-024 party_size='0': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message
+PASS S1-024 party_size='-1': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messag
+PASS S1-024 party_size='abc': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messa
+PASS S1-024 party_size='': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message"
+PASS S1-024 party_size='%204': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","mess
+PASS S1-049 date='2026-02-30': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","mess
+PASS S1-049 date='2026-13-01': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","mess
+PASS S1-049 date='20261015': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messag
+PASS S1-049 date='2026-10-15T00:00': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed"
+PASS S1-049 date='x': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message":"dat
+PASS S1-049 unknown restaurant: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such restauran
+NOTE A-11 unknown restaurant + bad party_size -> 422 validation_failed
+PASS S1-011 unknown query param ignored
+NOTE S1-024 party_size=0002 -> 200
+PASS S1-055 create: expected 201  got 201 None b'{"reservation_id":"res_4","reference":"KRN2PSPO","restaurant_id":"r_anker","table_i
+PASS S1-055 {'reservation_id': 'res_4', 'reference': 'KRN2PSPO', 'restaurant_id': 'r_anker', 'table_id': 't_2', 'table_ids': ['t_2']
+PASS S1-056 {'reservation_id': 'res_4', 'reference': 'KRN2PSPO', 'restaurant_id': 'r_anker', 'table_id': 't_2', 'table_ids': ['t_2']
+PASS S1-010 {'reservation_id': 'res_4', 'reference': 'KRN2PSPO', 'restaurant_id': 'r_anker', 'table_id': 't_2', 'table_ids': ['t_2']
+PASS S1-057 KRN2PSPO
+PASS S1-012 reservation_id <= 64
+PASS S1-039 replay reordered body -> 200 identical <200 b'{"reservation_id":"res_4","reference":"KRN2PSPO","restaurant_id":"r_anker"
+PASS S1-046 replay via other token of same user <200 b'{"reservation_id":"res_4","reference":"KRN2PSPO","restaurant_id":"r_anker","t
+PASS S1-040 same key, different (invalid) body: expected 409 idempotency_key_reuse got 409 idempotency_key_reuse b'{"error":{"code":
+PASS S1-040 same key, different valid body: expected 409 idempotency_key_reuse got 409 idempotency_key_reuse b'{"error":{"code":"ide
+PASS S1-041 other user same key: expected 201  got 201 None b'{"reservation_id":"res_5","reference":"P9BJX6PL","restaurant_id":"r_an
+PASS S1-058 overlap 19:00: expected 409 table_unavailable got 409 table_unavailable b'{"error":{"code":"table_unavailable","message"
+PASS S1-058 back-to-back 19:30 after 18:00+90: expected 201  got 201 None b'{"reservation_id":"res_6","reference":"CB89XA9J","restau
+PASS S1-061 party 3 on cap-2 table: expected 422 party_exceeds_capacity got 422 party_exceeds_capacity b'{"error":{"code":"party_exc
+PASS S1-043 key reused after 4xx -> first use (party == capacity accepted): expected 201  got 201 None b'{"reservation_id":"res_7","
+PASS S1-059 create t_1 2026-10-15T20:15 1: expected 422 not_on_slot_grid got 422 not_on_slot_grid b'{"error":{"code":"not_on_slot_gr
+PASS S1-060 create t_1 2026-10-15T17:30 1: expected 422 outside_opening_hours got 422 outside_opening_hours b'{"error":{"code":"outs
+PASS S1-060 create t_1 2026-10-15T22:00 1: expected 422 outside_opening_hours got 422 outside_opening_hours b'{"error":{"code":"outs
+PASS S1-060 create t_1 2026-10-14T19:00 1: expected 422 outside_opening_hours got 422 outside_opening_hours b'{"error":{"code":"outs
+PASS S1-060 create t_1 2026-10-15T23:00 1: expected 422 outside_opening_hours got 422 outside_opening_hours b'{"error":{"code":"outs
+PASS S1-062 create t_1 2026-10-15T20:00 0: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_f
+PASS S1-062 create t_1 2026-10-15T20:00 -1: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_
+PASS S1-022 create t_1 2026-10-15T20:00 '2': expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation
+PASS S1-022 create t_1 2026-10-15T20:00 True: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validatio
+PASS S1-022 create t_1 2026-10-15T20:00 2.5: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation
+PASS S1-022 create t_1 2026-10-15T20:00 None: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validatio
+PASS S1-023 create t_1 2026-10-15T20:00:00 1: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validatio
+PASS S1-023 create t_1 2026-10-15T20:00Z 1: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_
+PASS S1-023 create t_1 2026-10-15T20:00+02:00 1: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"valida
+PASS S1-023 create t_1 2026-10-15 20:00 1: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_f
+PASS S1-023 create t_1 2026-02-30T20:00 1: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_f
+PASS S1-023 create t_1 2026-10-15T25:00 1: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_f
+PASS S1-023 create t_1 2026-10-15T9:00 1: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_fa
+PASS S1-023 create t_1 202610152000 1: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_reques
+PASS S1-064 create t_nope 2026-10-15T20:00 1: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no 
+PASS S1-064 create n_1 2026-10-15T20:00 1: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no suc
+PASS S1-065 create 5 2026-10-15T20:00 1: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_requ
+PASS S1-064 unknown restaurant: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such restauran
+PASS S1-065 missing table_id: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messa
+PASS S1-065 restaurant_id wrong type: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request
+PASS S1-020 bad json: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request","message":"req
+PASS S1-020 array body: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request","message":"r
+PASS S1-037 no key: expected 400 missing_idempotency_key got 400 missing_idempotency_key b'{"error":{"code":"missing_idempotency_key
+PASS S1-037 empty: expected 400 missing_idempotency_key got 400 missing_idempotency_key b'{"error":{"code":"missing_idempotency_key"
+PASS S1-025 256: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message":"Idempote
+PASS S1-025 255-char key accepted: expected 201  got 201 None b'{"reservation_id":"res_8","reference":"Z03DD5ST","restaurant_id":"r_
+PASS S1-034 create no auth: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","message":"a v
+NOTE A-01 no auth + no key -> 401 unauthenticated
+NOTE A-01 bad json + no key -> 400 malformed_request
+PASS S1-011 unknown body field ignored <201 b'{"reservation_id":"res_9","reference":"Y17SKKXL","restaurant_id":"r_anker","table_id":
+PASS S1-018 past booking allowed: expected 201  got 201 None b'{"reservation_id":"res_10","reference":"S6464Z3H","restaurant_id":"r_
+PASS S1-084 IST offset +05:30
+PASS S1-072 cancel past: expected 409 cutoff_passed got 409 cutoff_passed b'{"error":{"code":"cutoff_passed","message":"too close to
+PASS S1-012 64-char restaurant/table ids in body: expected 201  got 201 None b'{"reservation_id":"res_11","reference":"O6ITK0JL","re
+PASS S1-068 ordered desc, full shape
+PASS S1-015 seeded reservation listed with fixture id/reference
+PASS S1-068 no other user's bookings
+PASS S1-068 empty list <200 b'{"reservations":[]}'>
+PASS S1-069 other's ref: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such reservation"}}'
+PASS S1-069 unknown ref: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such reservation"}}'
+PASS S1-069 get own
+PASS S1-073 cancel other's: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such reservation"}
+PASS S1-078 patch other's: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such reservation"}}
+PASS S1-034 cancel no auth: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","message":"a v
+PASS S1-072 cancel near: expected 409 cutoff_passed got 409 cutoff_passed b'{"error":{"code":"cutoff_passed","message":"too close to
+PASS S1-076 patch near: expected 409 cutoff_passed got 409 cutoff_passed b'{"error":{"code":"cutoff_passed","message":"too close to 
+PASS S1-076 patch near to far: expected 409 cutoff_passed got 409 cutoff_passed b'{"error":{"code":"cutoff_passed","message":"too cl
+PASS S1-072 near unchanged
+PASS S1-079 patch overlapping own interval <200 b'{"reservation_id":"res_7","reference":"AUV07QKN","restaurant_id":"r_anker","table_
+PASS S1-075 patch party: expected 422 party_exceeds_capacity got 422 party_exceeds_capacity b'{"error":{"code":"party_exceeds_capaci
+PASS S1-075 patch onto ada's t_2 18:00: expected 409 table_unavailable got 409 table_unavailable b'{"error":{"code":"table_unavailab
+PASS S1-075 patch grid: expected 422 not_on_slot_grid got 422 not_on_slot_grid b'{"error":{"code":"not_on_slot_grid","message":"the 
+PASS S1-075 patch bad start: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","messag
+PASS S1-075 patch start wrong type: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request",
+PASS S1-075 patch party string: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","mes
+PASS S1-075 patch table of other restaurant: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no s
+PASS S1-020 patch bad json: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request","message
+PASS S1-079 failed patches left booking unchanged
+PASS S1-079 occupancy follows patched booking
+PASS S1-074 empty patch 200 unchanged
+PASS S1-070 <200 b'{"reservation_id":"res_4","reference":"KRN2PSPO","restaurant_id":"r_anker","table_id":"t_2","table_ids":["t_2"],"
+PASS S1-054 cancel frees slot
+PASS S1-071 cancel twice
+PASS S1-044 replay after cancel returns original
+PASS S1-044 replay did not re-book
+PASS S1-077 patch cancelled: expected 409 reservation_cancelled got 409 reservation_cancelled b'{"error":{"code":"reservation_cancel
+PASS S1-042 dual body on /reservations: expected 201  got 201 None b'{"reservation_id":"res_12","reference":"5WA9496B","restaurant_i
+PASS S1-058 same slot again: expected 409 table_unavailable got 409 table_unavailable b'{"error":{"code":"table_unavailable","messag
+NOTE S1-042 same key on moves path after /reservations use (body differs by moves field) -> 201
+PASS S1-042 identical body+key on two paths -> 201 / 201 b'{"reservation_id":"res_13","reference":"DAPU4BP9","restaurant_id":"r_anke
+PASS S1-081 berlin spring slots ['00:00', '00:30', '01:00', '01:30', '03:00', '03:30', '04:00', '04:30']
+PASS S1-084 spring offsets
+PASS S1-081 berlin gap: expected 422 invalid_local_time got 422 invalid_local_time b'{"error":{"code":"invalid_local_time","message"
+PASS S1-081 berlin gap 2: expected 422 invalid_local_time got 422 invalid_local_time b'{"error":{"code":"invalid_local_time","messag
+PASS S1-083 spring 01:30+90 <201 b'{"reservation_id":"res_14","reference":"DV8Y8BL2","restaurant_id":"r_night","table_id":"n_1","tab
+PASS S1-082 berlin fall slots ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30']
+PASS S1-082 fall offsets first occurrence
+PASS S1-083 fall 01:30+90 ends 02:00+01:00 <201 b'{"reservation_id":"res_15","reference":"6GS8FL2C","restaurant_id":"r_night","table
+PASS S1-083 02:30(+02) overlaps 01:30(+02)+90 absolute: expected 409 table_unavailable got 409 table_unavailable b'{"error":{"code":
+PASS S1-082 02:30 first occurrence <201 b'{"reservation_id":"res_16","reference":"3QTDTU1F","restaurant_id":"r_night","table_id":"n_
+PASS S1-083 03:00(+01) back-to-back after 02:30(+02)+90 (absolute): expected 201  got 201 None b'{"reservation_id":"res_17","referen
+PASS S1-083 availability uses absolute overlap
+PASS S1-081 ny spring ['00:00', '00:30', '01:00', '01:30', '03:00', '03:30', '04:00', '04:30']
+PASS S1-081 ny gap: expected 422 invalid_local_time got 422 invalid_local_time b'{"error":{"code":"invalid_local_time","message":"th
+PASS S1-083 ny fall <201 b'{"reservation_id":"res_18","reference":"M2OGJQ4N","restaurant_id":"r_ny","table_id":"y_1","table_ids":["y
+PASS S1-082 ny repeated once
+PASS S1-084 ny summer
+PASS S1-100 swap <201 b'{"reservations":[{"reservation_id":"res_19","reference":"9KVDCG3D","restaurant_id":"r_big","table_id":"b_2",
+PASS S1-098 identity kept
+PASS S1-104 moves replay
+PASS S1-093 moves key reuse: expected 409 idempotency_key_reuse got 409 idempotency_key_reuse b'{"error":{"code":"idempotency_key_re
+PASS S1-101 no-op move <201 b'{"reservations":[{"reservation_id":"res_19","reference":"9KVDCG3D","restaurant_id":"r_big","table_id":
+PASS S1-102 second item fails: expected 422 party_exceeds_capacity got 422 party_exceeds_capacity b'{"error":{"code":"party_exceeds_
+PASS S1-102 first item not applied
+PASS S1-102 failed batch key reusable: expected 201  got 201 None b'{"reservations":[{"reservation_id":"res_19","reference":"9KVDCG3
+PASS S1-100 overlap with unlisted (bob): expected 409 table_unavailable got 409 table_unavailable b'{"error":{"code":"table_unavaila
+PASS S1-102 unchanged after 409
+PASS S1-100 overlap among resulting: expected 409 table_unavailable got 409 table_unavailable b'{"error":{"code":"table_unavailable"
+PASS S1-099 cancelled first in input order: expected 409 reservation_cancelled got 409 reservation_cancelled b'{"error":{"code":"res
+PASS S1-099 unknown first in input order: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such
+PASS S1-099 validation error of item 1 precedes cancelled item 2: expected 422 party_exceeds_capacity got 422 party_exceeds_capacity
+PASS S1-099 non-occupancy error beats occupancy conflict: expected 422 party_exceeds_capacity got 422 party_exceeds_capacity b'{"err
+PASS S1-097 cutoff precedes field errors: expected 409 cutoff_passed got 409 cutoff_passed b'{"error":{"code":"cutoff_passed","messa
+PASS S1-095 other owner's ref: expected 404 not_found got 404 not_found b'{"error":{"code":"not_found","message":"no such reservatio
+PASS S1-096 different restaurants: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","
+PASS S1-094 shape {}: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","message":"mov
+PASS S1-094 shape {"moves": []}: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","me
+PASS S1-094 shape {"moves": "x"}: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","m
+PASS S1-094 shape {"moves": [5]}: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","m
+PASS S1-094 shape {"moves": [{}]}: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"validation_failed","
+PASS S1-094 shape {"moves": [{"reference": 5}]}: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"valida
+PASS S1-094 shape {"moves": [{"reference": "9KVDCG3D"}, {"reference": "9KVDCG3: expected 422 validation_failed got 422 validation_fa
+PASS S1-094 shape {"moves": [{"reference": "9KVDCG3D"}, {"reference": "X00000": expected 422 validation_failed got 422 validation_fa
+PASS S1-093 moves no auth: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","message":"a va
+PASS S1-093 moves no key: expected 400 missing_idempotency_key got 400 missing_idempotency_key b'{"error":{"code":"missing_idempoten
+PASS S1-093 moves bad json: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request","message
+NOTE A-12 moves item table_id wrong type -> 400 malformed_request
+PASS S1-100 chain into slot vacated by another listed booking: expected 201  got 201 None b'{"reservations":[{"reservation_id":"res_
+PASS S1-104 moves replay after cancel returns original
+PASS S1-104 replay changed nothing
+PASS S1-067 50 concurrent creates statuses {201: 1, 409: 49}
+PASS S1-005 max latency 0.12s wall 0.14s
+PASS S1-067 slot occupied once
+PASS S1-045 20 concurrent identical {200: 19, 201: 1}
+PASS S1-045 exactly one reservation created (20->21)
+PASS S1-080 mixed contention wins=1 409s=24 other=[]
+PASS S1-105 b_1 confirmed bookings on 2026-11-19: 1
+PASS S1-105 contended batches: wins=[2] statuses=[409, 409, 201, 409, 409, 409, 409, 409, 409, 409]
+PASS S1-102 no partial batch visible: []
+PASS S1-045 10 identical concurrent moves [200, 200, 200, 200, 200, 200, 200, 200, 200, 201]
+PASS S1-088 failed key before export: expected 422 party_exceeds_capacity got 422 party_exceeds_capacity b'{"error":{"code":"party_e
+PASS S1-085 <200 b'{"track":"tablekeeper","format_version":1,"state":{"schema":"tablekeeper-state","stage":4,"restaurants":[{"id":"r
+PASS S1-036 no plaintext passwords in export
+PASS S1-090 write after export: expected 201  got 201 None b'{"reservation_id":"res_60","reference":"BPBCHZYS","restaurant_id":"r_an
+PASS S1-090 later writes visible in a new export only
+PASS S1-087 bad import ['track', 'format_version', 'state']: expected 422 validation_failed got 422 validation_failed b'{"error":{"c
+PASS S1-087 bad import ['track', 'format_version', 'state']: expected 422 validation_failed got 422 validation_failed b'{"error":{"c
+PASS S1-087 bad import ['track', 'format_version']: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"val
+PASS S1-087 bad import ['track', 'format_version', 'state']: expected 422 validation_failed got 422 validation_failed b'{"error":{"c
+PASS S1-087 bad import ['track', 'format_version']: expected 422 validation_failed got 422 validation_failed b'{"error":{"code":"val
+PASS S1-087 import bad json: expected 400 malformed_request got 400 malformed_request b'{"error":{"code":"malformed_request","messag
+NOTE S1-087 import with state={} -> 422 validation_failed
+PASS S1-087 state unchanged after rejected imports
+PASS S1-087 receipts unchanged after rejected imports <200 b'{"reservation_id":"res_4","reference":"KRN2PSPO","restaurant_id":"r_ank
+PASS S1-087 replay after rejected imports booked nothing
+PASS S1-086 import #1: expected 204  got 204 None b''
+PASS S1-086 import #2: expected 204  got 204 None b''
+PASS S1-086 state equals snapshot, no duplicates
+PASS S1-089 post-export token gone: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","messa
+PASS S1-089 post-export user gone: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","messag
+PASS S1-088 signup user + token survive
+PASS S1-088 replay after import
+PASS S1-088 reuse after import: expected 409 idempotency_key_reuse got 409 idempotency_key_reuse b'{"error":{"code":"idempotency_key
+PASS S1-104 moves receipt survives import
+PASS S1-088 failed key reusable: expected 201  got 201 None b'{"reservation_id":"res_60","reference":"XAE1ZNZU","restaurant_id":"r_a
+PASS S1-088 post-export key is unused after import: expected 201  got 201 None b'{"reservation_id":"res_61","reference":"NMFE9OZY","
+PASS S1-092 61 refs unique
+PASS S1-090 import into fresh container: expected 204  got 204 None b''
+PASS S1-090 fresh container: replay with old token
+PASS S1-088 fresh container: hashed-password login: expected 200  got 200 None b'{"user_id":"u_ada","display_name":"Ada","token":"8P
+PASS S1-088 fresh container: bob's list
+PASS S1-092 fresh container generated ref does not collide
+PASS S1-008 old token after reset: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","messag
+PASS S1-008 signup user after reset: expected 401 unauthenticated got 401 unauthenticated b'{"error":{"code":"unauthenticated","mess
+PASS S1-008 idempotency records cleared by reset: expected 201  got 201 None b'{"reservation_id":"res_4","reference":"S8EJSQS2","res
+PASS S1-007 only fixture + new
+NOTE A-04 patch far booking to a start inside cutoff -> 200 None
+PASS S1-006 5xx responses: []
+PASS S1-009/S1-019 content-type/error-body violations: []
+slowest: [(0.125, 'POST', '/reservations'), (0.125, 'POST', '/_test/reset'), (0.11, 'POST', '/reservations')]
+SUMMARY pass=240 fail=0 note=9 requests=412 3.5s

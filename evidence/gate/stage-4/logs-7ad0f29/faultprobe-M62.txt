@@ -1,0 +1,3 @@
+73 passed, 3 skipped, 3 deselected in 107.80s (0:01:47)
+SUMMARY pass=89 fail=1 note=0 2.5s
+FAILED S4-006 plan equals oracle optimum (own accepted terms): got {'plan_id': 'plan_9', 'restaurant_revision': 8, 'closure': {'table_id': 't_2', 'from': '2026-11-12T18:00:00+01:00', 'to': '2026-11-12T23:00:00+01:00'}, 'assignments': [{'reference': '63QS7Y09', 'table_ids': ['t_3'], 'changed': False}, {'reference'

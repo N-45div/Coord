@@ -1,0 +1,5 @@
+FAILED test_51_apply.py::test_apply_moves_bookings_and_records_history - Asse...
+1 failed, 33 passed, 3 deselected in 48.64s
+SUMMARY pass=88 fail=2 note=0 2.4s
+FAILED S4-015 apply response 10 vs 9
+FAILED S4-010 apply +1 once for the whole plan

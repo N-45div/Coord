@@ -1,0 +1,3 @@
+FAILED test_50_replan.py::test_no_feasible_plan_changes_nothing - AssertionEr...
+1 failed, 5 passed, 3 deselected in 3.81s
+SUMMARY pass=90 fail=0 note=0 2.5s

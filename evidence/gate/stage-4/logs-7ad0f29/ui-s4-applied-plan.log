@@ -1,0 +1,13 @@
+PASS S4-020 @1280 booked on Booth 2
+PASS S4-020 @1280 plan applied: {'plan_id': 'plan_1', 'restaurant_revision': 1, 'closure': {'table_id': 't_2', 'from': '2026-11-19T19:00:00+01:00', 'to': '2026-11-19T20:30:00+01:00'}, 'assignments': [{'reference': '9XNJYSK8', 'table_ids': ['t_1'], 'changed': True}], 'moved_count': 1, 'unused_seats': 0}
+PASS S4-020 @1280 confirmation shows the reassigned tables ['Window 1']: 'Window 1'
+PASS S4-020 @1280 grid: closed Booth 2 unavailable
+PASS S4-020 @1280 lookup shows ['Window 1']: 'Window 1'
+PASS S2-024 @1280 no horizontal scroll on lookup after replan
+PASS S4-020 @375 booked on Booth 2
+PASS S4-020 @375 plan applied: {'plan_id': 'plan_2', 'restaurant_revision': 3, 'closure': {'table_id': 't_2', 'from': '2026-11-19T21:00:00+01:00', 'to': '2026-11-19T22:30:00+01:00'}, 'assignments': [{'reference': 'XARGLQ3U', 'table_ids': ['t_1'], 'changed': True}], 'moved_count': 1, 'unused_seats': 0}
+PASS S4-020 @375 confirmation shows the reassigned tables ['Window 1']: 'Window 1'
+PASS S4-020 @375 grid: closed Booth 2 unavailable
+PASS S4-020 @375 lookup shows ['Window 1']: 'Window 1'
+PASS S2-024 @375 no horizontal scroll on lookup after replan
+SUMMARY pass=12 fail=0

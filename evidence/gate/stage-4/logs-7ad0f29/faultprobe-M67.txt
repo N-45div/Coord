@@ -1,0 +1,4 @@
+FAILED test_52_series_amend.py::test_exceptions_and_cancelled_are_not_eligible
+1 failed, 45 passed, 3 deselected in 33.19s
+SUMMARY pass=89 fail=1 note=0 2.1s
+FAILED S4-024 exception and cancelled occurrences excluded: ['2026-11-17T21:00', '2026-11-24T21:00', '2026-12-01T21:00', '2026-12-08T20:00']

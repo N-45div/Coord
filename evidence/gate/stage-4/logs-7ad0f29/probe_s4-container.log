@@ -1,0 +1,91 @@
+PASS S1-007 reset: expected 204  got <204 b''>
+PASS S4-010 revision 0 after reset
+PASS S4-010 create +1
+PASS S4-010 replay and failed create do not increment
+PASS S4-010 no-op PATCH does not increment
+PASS S4-010 real PATCH +1
+PASS S4-010 create +1, cancel +1, repeat cancel 0
+PASS S4-010 policy publication +1, replay 0
+PASS S4-001 no token: expected 401 unauthenticated got <401 b'{"error":{"code":"unauthenticated","message":"a valid bearer token is required"}}'>
+PASS S4-001 non-manager: expected 403 forbidden got <403 b'{"error":{"code":"forbidden","message":"only this restaurant\'s managers may change seating"}}'>
+PASS S4-001 manager of another restaurant: expected 403 forbidden got <403 b'{"error":{"code":"forbidden","message":"only this restaurant\'s managers may change seating"}}'
+PASS S4-001 unknown restaurant: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such restaurant"}}'>
+PASS S4-001 no key: expected 400 missing_idempotency_key got <400 b'{"error":{"code":"missing_idempotency_key","message":"Idempotency-Key header is required"}}'>
+PASS S4-002 no offset: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"from must be an RFC 3339 timestamp with an offset"}}'>
+PASS S4-002 from == to: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"from must be earlier than to"}}'>
+PASS S4-002 from > to: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"from must be earlier than to"}}'>
+PASS S4-002 unparseable: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"from must be an RFC 3339 timestamp with an offset"}}'>
+PASS S4-002 missing to: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"to must be an RFC 3339 timestamp with an offset"}}'>
+PASS S4-002 missing table_id: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"table_id must be a table id"}}'>
+PASS S4-002 table_id int: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"table_id must be a table id"}}'>
+PASS S4-002 unknown table: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such table at this restaurant"}}'>
+PASS S4-002 another restaurant's table: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such table at this restaurant"}}'>
+PASS S4-005 setup <201 b'{"reservation_id":"res_3","reference":"QGPCJB4L","restaurant_id":"r_rp","table_id":"t_4","table_ids":["t_4"],"party_size":2,"status":"confirmed","s
+PASS S4-005 R1 accepted terms predate the policy (t_6 = 8)
+PASS S4-007 preview shape <201 b'{"plan_id":"plan_9","restaurant_revision":8,"closure":{"table_id":"t_2","from":"2026-11-12T18:00:00+01:00","to":"2026-11-12T23:00:00+01:00"
+PASS S4-007 closure echo (A-39)
+PASS S4-006 plan equals oracle optimum (own accepted terms): got {'plan_id': 'plan_9', 'restaurant_revision': 8, 'closure': {'table_id': 't_2', 'from': '2026-11-12T18:00:00
+PASS S4-003 assignments = every considered booking in reference order (A-35)
+PASS S4-001 preview replay 200 identical
+PASS S4-008 preview changes nothing (bookings, revision, no closure)
+PASS S4-011 non-manager apply: expected 403 forbidden got <403 b'{"error":{"code":"forbidden","message":"only this restaurant\'s managers may change seating"}}'>
+PASS S4-012 unknown plan: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such plan"}}'>
+PASS S4-015 apply: expected 201  got <201 b'{"plan_id":"plan_9","restaurant_revision":9,"reservations":[{"reservation_id":"res_5","reference":"38JQBQG7","restaurant_id":"r_
+PASS S4-015 apply response 9 vs 9
+PASS S4-017 unmoved 38JQBQG7 unchanged
+PASS S4-017 moved KT8QTAFR: {'seq': 3, 'at': '2026-10-05T22:31:51+02:00', 'event': 'reassigned', 'changes': [{'field': 'table_ids', 'from': ['t_2'], 'to': ['t_6']}], 'plan_
+PASS S4-017 unmoved QGPCJB4L unchanged
+PASS S4-017 unmoved YAD699OB unchanged
+PASS S4-010 apply +1 once for the whole plan
+PASS S4-014 apply replay 200 original
+PASS S4-014 apply under another key: expected 409 plan_already_applied got <409 b'{"error":{"code":"plan_already_applied","message":"this plan has already been applied"}}'>
+PASS S4-018 closure excluded from availability/options/explain: {'table_id': 't_2', 'policy_version': 1, 'available': False, 'rules': [{'rule': 'capacity', 'holds': True}, 
+PASS S4-018 17:00 slot (ends 18:30) overlaps the closure
+PASS S4-018 create on closed table: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that time"}}'>
+PASS S4-018 pair containing closed table: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that time"}}'>
+PASS S4-018 PATCH onto closed table: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that time"}}'>
+PASS S4-018 closure does not affect another day
+PASS S4-013 intervening booking invalidates: expected 409 stale_plan got <409 b'{"error":{"code":"stale_plan","message":"the restaurant has changed since this plan was made
+PASS S4-013 stale apply changed nothing
+PASS S4-013 apply at r_o2 <201 b'{"plan_id":"plan_16","restaurant_revision":1,"reservations":[]}'>
+PASS S4-012 plan of another restaurant via r_rp path: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such plan"}}'>
+PASS S4-016 closure at another restaurant does not invalidate; concurrent applies -> one 201: [201, 409, 409, 409, 409, 409]
+PASS S4-009 no feasible plan: oracle None got <409 b'{"error":{"code":"no_feasible_plan","message":"no seating keeps every booking"}}'>
+PASS S4-006 rank tie-break: got {'plan_id': 'plan_19', 'restaurant_revision': 19, 'closure': {'table_id': 't_2', 'from': '2026-11-16T18:00:00+01:00', 'to': '2026-11-16T22:0
+PASS S4-006 fewest unused seats wins over lower rank (pair t_1+t_5, not t_4): got {'plan_id': 'plan_20', 'restaurant_revision': 21, 'closure': {'table_id': 't_2', 'from': '
+PASS S4-021 amend no token: expected 401 unauthenticated got <401 b'{"error":{"code":"unauthenticated","message":"a valid bearer token is required"}}'>
+PASS S4-021 amend another owner's series: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such series"}}'>
+PASS S4-021 unknown series: expected 404 not_found got <404 b'{"error":{"code":"not_found","message":"no such series"}}'>
+PASS S4-021 amend no key: expected 400 missing_idempotency_key got <400 b'{"error":{"code":"missing_idempotency_key","message":"Idempotency-Key header is required"}}'>
+PASS S4-022 from_index 4: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"from_index must be an integer from 0 to 3"}}'>
+PASS S4-022 from_index -1: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"from_index must be an integer from 0 to 3"}}'>
+PASS S4-022 from_index bool: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"from_index must be an integer from 0 to 3"}}'>
+PASS S4-022 local_time 24:00: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"local_time must be HH:MM from 00:00 to 23:59"}}'>
+PASS S4-022 local_time 8:00: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"local_time must be HH:MM from 00:00 to 23:59"}}'>
+PASS S4-022 local_time seconds: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"local_time must be HH:MM from 00:00 to 23:59"}}'>
+PASS S4-022 local_time int: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"local_time must be HH:MM from 00:00 to 23:59"}}'>
+PASS S4-022 revision 0: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive integer"}}'>
+PASS S4-022 revision bool: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive integer"}}'>
+PASS S4-022 revision string: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"expected_revision must be a positive integer"}}'>
+PASS S4-022 missing local_time: expected 422 validation_failed got <422 b'{"error":{"code":"validation_failed","message":"local_time must be HH:MM from 00:00 to 23:59"}}'>
+PASS S4-023 stale before validation (22:00 would end after close): expected 409 stale_revision got <409 b'{"error":{"code":"stale_revision","message":"the series has change
+PASS S4-024 occurrences >= from_index moved to 20:00 on their scheduled dates
+PASS S4-027 series rev +1, occurrence revs +1, no exceptions, restaurant rev +1 (2)
+PASS S4-027 changed entry: {'seq': 2, 'at': '2026-10-05T22:31:52+02:00', 'event': 'changed', 'changes': [{'field': 'starts_at_local', 'from': '2026-12-01T19:00', 'to': '202
+PASS S4-028 amend replay 200 original
+PASS S4-027 all-no-op amend changes no revision
+PASS S4-024 exception and cancelled occurrences excluded: ['2026-11-17T21:00', '2026-11-24T21:00', '2026-12-01T20:00', '2026-12-08T20:00']
+PASS S4-026 amend conflicts with bob: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that time"}}'>
+PASS S4-026 failed amend changes nothing
+PASS S4-025 22:00 + 90 min ends after 23:00: expected 422 outside_opening_hours got <422 b'{"error":{"code":"outside_opening_hours","message":"the booking is outside openin
+PASS S4-029 concurrent amends from one revision: [201, 409, 409, 409, 409, 409]
+PASS S4-019 replan moved occurrence: ['t_1'], series rev 6->7
+PASS S4-024 amend after replan: moved table ['t_1'] is taken by ['D4E7RT6M'] at 17:00 -> 409 (<409 b'{"error":{"code":"table_unavailable","message":"the table is taken at t
+PASS S4-030 stage-4 import: expected 204  got <204 b''>
+PASS S4-030 bookings and restaurant revision round-trip
+PASS S4-030 applied-plan receipt survives import
+PASS S4-030 applied state survives import: expected 409 plan_already_applied got <409 b'{"error":{"code":"plan_already_applied","message":"this plan has already been applie
+PASS S4-030 closure survives import: expected 409 table_unavailable got <409 b'{"error":{"code":"table_unavailable","message":"the table is taken at that time"}}'>
+PASS S4-030 import into fresh instance: expected 204  got <204 b''>
+PASS S1-006 5xx: []
+SUMMARY pass=90 fail=0 note=0 2.5s

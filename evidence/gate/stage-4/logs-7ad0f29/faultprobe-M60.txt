@@ -1,0 +1,4 @@
+FAILED test_50_replan.py::test_other_considered_bookings_stay_and_pair_used
+1 failed, 1 passed, 3 deselected in 1.00s
+SUMMARY pass=89 fail=1 note=0 2.5s
+FAILED S4-006 fewest unused seats wins over lower rank (pair t_1+t_5, not t_4): got {'plan_id': 'plan_20', 'restaurant_revision': 21, 'closure': {'table_id': 't_2', 'from': '2026-11-05T18:00:00+01:00', 'to': '2026-11-05T22:00:00+01:00'}, 'assignments': [{'reference': '8O4BI2FW', 'table_ids': ['t_3'], 'changed': F

@@ -1,0 +1,5 @@
+FAILED test_51_apply.py::test_apply_idempotency_already_applied_and_stale - A...
+1 failed, 35 passed, 3 deselected in 24.80s
+SUMMARY pass=88 fail=2 note=0 2.7s
+FAILED S4-013 intervening booking invalidates: expected 409 stale_plan got <201 b'{"plan_id":"plan_12","restaurant_revision":12,"reservations":[{"reservation_id":"res_6","reference":"8KVUKZO4","restaurant_id":"r_rp","table_id":"t_1","table_ids":["t_1"],"party_size":2,"status":"confirmed","starts_at_local":"2026-1
+FAILED S4-013 stale apply changed nothing

@@ -1,0 +1,4 @@
+FAILED test_50_replan.py::test_preview_changes_nothing - AssertionError: a pr...
+1 failed, 6 passed, 3 deselected in 3.67s
+SUMMARY pass=89 fail=1 note=0 2.5s
+FAILED S4-008 preview changes nothing (bookings, revision, no closure)

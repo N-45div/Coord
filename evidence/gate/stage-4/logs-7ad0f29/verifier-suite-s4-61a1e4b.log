@@ -1,0 +1,110 @@
+........................................................................ [ 10%]
+........................................................................ [ 21%]
+...........s......................................s..................... [ 31%]
+........................................................................ [ 42%]
+.............................................s.......................... [ 53%]
+........................................................................ [ 63%]
+........................................................................ [ 74%]
+........................................................................ [ 84%]
+..........................................F............................. [ 95%]
+....................FF.........                                          [100%]
+================================== FAILURES ===================================
+____________ test_more_than_six_considered_may_hit_planning_limit _____________
+
+api = <tk.Api object at 0x000001C9D3F54A70>
+
+    @pytest.mark.ledger("S4-004")
+    def test_more_than_six_considered_may_hit_planning_limit(api):
+        seeds = [seed(f"RL{i:04d}", [tid], f"{D}T19:00", 1) for i, tid in enumerate(["r_1", "r_2", "r_3", "r_4", "r_5"])]
+        seeds += [seed("RL0005", ["r_6"], f"{D}T18:00", 1), seed("RL0006", ["r_6"], f"{D}T20:00", 1)]
+        w = world(api, seeds)
+        r, cons, orc, f, t = preview(api, w, "r_1", f"{D}T18:00", f"{D}T22:00")
+        tk.expect_no_5xx(r)
+        if r.status == 422:
+            expect(r, 422, "planning_limit")
+        else:
+>           check_plan(r, cons, orc, "r_1", f, t)
+
+test_50_replan.py:220: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+test_50_replan.py:67: in check_plan
+    expect(resp, 201)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+r = <POST http://127.0.0.1:18386/restaurants/r_rep/replans -> 409 '{"error":{"code":"no_feasible_plan","message":"no seating keeps every booking"}}'>
+status = 201, code = None
+
+    def expect(r, status, code=None):
+        want = f"{status} {code}" if code else f"{status}"
+        if status >= 400 and code is not None and r.status == status:
+            assert_error_body(r)
+            assert r.json["error"]["code"] == code, f"expected {want}, got {r!r}"
+>       assert r.status == status, f"expected {want}, got {r!r}"
+E       AssertionError: expected 201, got <POST http://127.0.0.1:18386/restaurants/r_rep/replans -> 409 '{"error":{"code":"no_feasible_plan","message":"no seating keeps every booking"}}'>
+
+tk.py:243: AssertionError
+___________________ test_occupancy_conflict_changes_nothing ___________________
+
+sw = <tk.World object at 0x000001C9D7BBE060>
+api = <tk.Api object at 0x000001C9D7BBDCA0>
+
+    @pytest.mark.ledger("S4-026", "S1-043")
+    def test_occupancy_conflict_changes_nothing(sw, api):
+>       api.book(sw.bob, "r_rep", "r_3", "2027-07-01T21:30", 2)
+
+test_52_series_amend.py:129: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tk.py:117: in book
+    expect(r, 201)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+r = <POST http://127.0.0.1:18386/reservations -> 422 '{"error":{"code":"outside_opening_hours","message":"the booking is outside opening hours"}}'>
+status = 201, code = None
+
+    def expect(r, status, code=None):
+        want = f"{status} {code}" if code else f"{status}"
+        if status >= 400 and code is not None and r.status == status:
+            assert_error_body(r)
+            assert r.json["error"]["code"] == code, f"expected {want}, got {r!r}"
+>       assert r.status == status, f"expected {want}, got {r!r}"
+E       AssertionError: expected 201, got <POST http://127.0.0.1:18386/reservations -> 422 '{"error":{"code":"outside_opening_hours","message":"the booking is outside opening hours"}}'>
+
+tk.py:243: AssertionError
+__________ test_non_occupancy_errors_take_precedence_in_index_order ___________
+
+sw = <tk.World object at 0x000001C9D7BBD700>
+api = <tk.Api object at 0x000001C9D7BBFC50>
+
+    @pytest.mark.ledger("S4-026", "A-40")
+    def test_non_occupancy_errors_take_precedence_in_index_order(sw, api):
+        expect(api.publish(sw.mgr, "r_rep", tk.policy("2027-07-01", slot=60, dur=120,
+                                                      hours=REP["opening_hours"],
+                                                      caps={t["id"]: t["capacity"] for t in REP["tables"]})), 201)
+>       api.book(sw.bob, "r_rep", "r_3", "2027-06-24T21:30", 2)  # occurrence 1 at 20:30 would overlap
+
+test_52_series_amend.py:145: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tk.py:117: in book
+    expect(r, 201)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+r = <POST http://127.0.0.1:18386/reservations -> 422 '{"error":{"code":"outside_opening_hours","message":"the booking is outside opening hours"}}'>
+status = 201, code = None
+
+    def expect(r, status, code=None):
+        want = f"{status} {code}" if code else f"{status}"
+        if status >= 400 and code is not None and r.status == status:
+            assert_error_body(r)
+            assert r.json["error"]["code"] == code, f"expected {want}, got {r!r}"
+>       assert r.status == status, f"expected {want}, got {r!r}"
+E       AssertionError: expected 201, got <POST http://127.0.0.1:18386/reservations -> 422 '{"error":{"code":"outside_opening_hours","message":"the booking is outside opening hours"}}'>
+
+tk.py:243: AssertionError
+=========================== short test summary info ===========================
+FAILED test_50_replan.py::test_more_than_six_considered_may_hit_planning_limit
+FAILED test_52_series_amend.py::test_occupancy_conflict_changes_nothing - Ass...
+FAILED test_52_series_amend.py::test_non_occupancy_errors_take_precedence_in_index_order
+SKIPPED [1] test_10_runtime.py:22: TK_STARTUP_SECONDS not provided (set by candidate.py)
+SKIPPED [1] test_10_runtime.py:263: needs candidate.py (TK_SECOND_STARTUP_SECONDS)
+SKIPPED [1] test_13_create.py:113: null for a required string: missing (422) or wrong type (400) is not decided by the spec
+3 failed, 673 passed, 3 skipped in 850.99s (0:14:10)

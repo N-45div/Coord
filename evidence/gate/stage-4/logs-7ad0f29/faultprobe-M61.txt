@@ -1,0 +1,5 @@
+FAILED test_50_replan.py::test_other_considered_bookings_stay_and_pair_used
+1 failed, 1 passed, 3 deselected in 1.60s
+SUMMARY pass=84 fail=3 note=0 2.2s
+FAILED S4-006 plan equals oracle optimum (own accepted terms): got {'plan_id': 'plan_9', 'restaurant_revision': 8, 'closure': {'table_id': 't_2', 'from': '2026-11-12T18:00:00+01:00', 'to': '2026-11-12T23:00:00+01:00'}, 'assignments': [{'reference': 'MKW714HS', 'table_ids': ['t_6'], 'changed': True}], 'moved_count
+FAILED S4-003 assignments = every considered booking in reference order (A-35)

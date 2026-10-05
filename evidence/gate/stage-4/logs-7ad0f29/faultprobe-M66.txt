@@ -1,0 +1,5 @@
+FAILED test_52_series_amend.py::test_amend_moves_eligible_occurrences - Asser...
+1 failed, 44 passed, 3 deselected in 36.73s
+SUMMARY pass=84 fail=6 note=0 2.3s
+FAILED S4-027 series rev +1, occurrence revs +1, no exceptions, restaurant rev +1 (2)
+FAILED S4-024 exception and cancelled occurrences excluded: ['2026-11-17T21:00', '2026-11-24T20:00', '2026-12-01T20:00', '2026-12-08T20:00']

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build and test an exact candidate commit from a clean worktree, never the live tree.
 
-    py -3.12 verification/stage-1/candidate.py <commit> [--stage 1] [--port 18082] [--second-port 18092]
+    py -3.12 verification/stage-1/candidate.py <commit> [--stage 1] [--port 18282] [--second-port 18292]
                                                 [--repo <result repo>] [-- extra pytest args]
 
 Steps: git worktree add --detach <scratch>/<short-sha> <commit>; docker build the stage folder
@@ -68,8 +68,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("commit")
     ap.add_argument("--stage", default="1")
-    ap.add_argument("--port", type=int, default=18082)
-    ap.add_argument("--second-port", type=int, default=18092)
+    ap.add_argument("--port", type=int, default=18282)
+    ap.add_argument("--second-port", type=int, default=18292)
     ap.add_argument("--repo", default=str(DEFAULT_REPO))
     ap.add_argument("--keep", action="store_true", help="leave containers running")
     ap.add_argument("--native", default=None,

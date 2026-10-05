@@ -8,10 +8,10 @@ Every stage-1 requirement stays in force, so the stage-1 tests are carried over.
 assertion (`tk.assert_res`) now also enforces stage-2 S2-035: `table_ids` always present, and `table_id`
 present exactly when the set has one member.
 
-## Run against a running service (one command)
+## Run against a running service (one command; Verifier ports are 18200-18299, ledger E-02)
 
 ```sh
-py -3.12 verification/stage-2/run.py --base-url http://127.0.0.1:18082
+py -3.12 verification/stage-2/run.py --base-url http://127.0.0.1:18282
 ```
 
 On first use this creates `verification/stage-2/.venv` from the pinned `requirements.txt` and installs

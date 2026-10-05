@@ -4,10 +4,10 @@ Owner: Verifier. Expected values come only from `kickoff/tablekeeper/spec/stage-
 stage-1 section of `evidence/ledger/ledger.md` (S1-001..S1-105, A-01..A-19). The product is reached
 only over HTTP. No product source and no harness test file was read to write this suite.
 
-## Run against a running service (one command)
+## Run against a running service (one command; Verifier ports are 18200-18299, ledger E-02)
 
 ```sh
-py -3.12 verification/stage-1/run.py --base-url http://localhost:18082
+py -3.12 verification/stage-1/run.py --base-url http://127.0.0.1:18282
 ```
 
 `run.py` creates `verification/stage-1/.venv` (or `$TK_VERIFIER_VENV`) from the pinned
@@ -18,12 +18,12 @@ container for the cross-container import test.
 ## Run against an exact commit (clean worktree build)
 
 ```sh
-py -3.12 verification/stage-1/candidate.py <commit> [--port 18082] [--second-port 18092]
+py -3.12 verification/stage-1/candidate.py <commit> [--port 18282] [--second-port 18292]
 ```
 
 This adds a detached worktree at `scratch/verifier/<short-sha>`, `docker build`s `stage-1/`
-(tag `tk-verifier-s1-<short>`) and starts it with `--cpus 2 --memory 2g -e PORT=9137 -p 18082:9137`. A
-second container starts with PORT unset on `18092:8080`. It times the first healthy `/health`, runs
+(tag `tk-verifier-s1-<short>`) and starts it with `--cpus 2 --memory 2g -e PORT=9137 -p 18282:9137`. A
+second container starts with PORT unset on `18292:8080`. It times the first healthy `/health`, runs
 the suite and writes `pytest.txt`, `junit.xml`, container logs and `summary.json` to
 `scratch/verifier/results/<short>-s1-<timestamp>/`.
 

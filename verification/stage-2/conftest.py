@@ -7,7 +7,7 @@ import tk
 
 
 def pytest_addoption(parser):
-    parser.addoption("--base-url", default=None, help="service base URL (default $TK_BASE_URL or http://localhost:18082)")
+    parser.addoption("--base-url", default=None, help="service base URL (default $TK_BASE_URL or http://127.0.0.1:18282)")
     parser.addoption("--dump-ledger", default=None, help="write {test id: [ledger ids]} JSON and exit after collection")
 
 

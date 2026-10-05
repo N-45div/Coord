@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the stage-2 verifier suite against a running service. One command:
 
-    py -3.12 verification/stage-2/run.py --base-url http://127.0.0.1:18082 [extra pytest args]
+    py -3.12 verification/stage-2/run.py --base-url http://127.0.0.1:18282 [extra pytest args]
 
 Creates <suite>/.venv (or $TK_VERIFIER_VENV) with the pinned requirements and Playwright's Chromium
 on first use. Optional: --second-base-url <url> of a second, freshly started instance (cross-instance
@@ -36,7 +36,7 @@ def ensure_venv():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base-url", default=os.environ.get("TK_BASE_URL", "http://127.0.0.1:18082"))
+    ap.add_argument("--base-url", default=os.environ.get("TK_BASE_URL", "http://127.0.0.1:18282"))
     ap.add_argument("--second-base-url", default=os.environ.get("TK_SECOND_BASE_URL", ""))
     args, rest = ap.parse_known_args()
     py = ensure_venv()

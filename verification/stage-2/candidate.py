@@ -2,7 +2,7 @@
 """Build and test an exact candidate commit from a clean worktree, never the live tree.
 
     py -3.12 verification/stage-2/candidate.py <commit> [--stage 2] [--with-stage1 <accepted stage-1 commit>]
-        [--port 18082] [--second-port 18092] [--stage1-port 18062]
+        [--port 18282] [--second-port 18292] [--stage1-port 18262]
         [--native "python -m tablekeeper" --native-pip "tzdata==2025.3"] [-- extra pytest args]
 
 For each service: `git worktree add --detach <scratch>/<short-sha> <commit>` (clean, HEAD checked), then
@@ -153,9 +153,9 @@ def main():
     ap.add_argument("commit")
     ap.add_argument("--stage", default="2")
     ap.add_argument("--with-stage1", default=None, help="accepted stage-1 commit to export from (upgrade tests)")
-    ap.add_argument("--port", type=int, default=18082)
-    ap.add_argument("--second-port", type=int, default=18092)
-    ap.add_argument("--stage1-port", type=int, default=18062)
+    ap.add_argument("--port", type=int, default=18282)
+    ap.add_argument("--second-port", type=int, default=18292)
+    ap.add_argument("--stage1-port", type=int, default=18262)
     ap.add_argument("--repo", default=str(DEFAULT_REPO))
     ap.add_argument("--native", default=None)
     ap.add_argument("--native-pip", default="")

@@ -238,6 +238,10 @@ Collected test cases: 598.
 | A-32 | Restaurant revision | — | restaurant revision is not observable through the stage-3 API (it is exposed in stage 4) |
 | A-33 | Series revision events | `test_43_series.py::test_exceptions_revisions_cancel_and_replay`<br>`test_44_moves_policies.py::test_batch_touching_series_occurrences` |  |
 | A-34 | Policy response | `test_42_policies.py::test_publish_versions_per_restaurant_and_list` |  |
+| A-43 | Seeded cancelled bookings | `test_41_history.py::test_seeded_bookings_revision_1_policy_0` |  |
+| A-44 | Pre-1893 local-mean-time offsets | — | pre-1893 local mean time offsets are out of scope (ledger); not tested |
+| A-45 | Restaurant options filled after load. | — | superseded by A-46 |
+| A-46 | A-45 revised after Gate's measurement | `test_30_browser.py::test_restaurant_select_holds_only_ids_at_load` |  |
 
 Uncovered without a reason: none.
-Marker ids not in the ledger: A-43, A-46.
+Marker ids not in the ledger: none.

@@ -118,3 +118,8 @@ TOTAL           142476702    127298904    695393942   31286966451  $24695.14
 ```
 
 Wall clock: 21:25 IST human dispatch → 02:44 IST fourth acceptance = **5h19m**, of which about 75 min was the E-01 Docker hang.
+
+## Addenda after the report
+
+- 02:5x IST: Verifier closed the M62 gap with a tuned test (`test_50_replan::test_planner_uses_accepted_capacities_that_differ_from_fixture`, verification/stage-4 `b220403`, 680 tests). It passes against the accepted 7ad0f29.
+- Verifier ran the stage-3 suite (73910bf) against the stage-4 build: 597 passed, 0 failed, 1 skipped. Gate re-checked the submission at d8e0349: every stage folder matches its accepted commit, with no uncommitted changes and no nested .git.

@@ -1,0 +1,20 @@
+PASS setup 
+PASS setup 
+PASS setup 
+PASS S2-026 
+PASS S2-027 
+PASS S2-026 
+PASS S2-035 
+PASS S2-027 
+PASS S2-026 
+PASS S2-028 
+PASS S2-029 
+NOTE S2-029 replayed body identical to the stage-1 original: True; extra keys [], missing []
+PASS S2-026 
+PASS S2-026 
+PASS S2-026 
+PASS S2-026 
+PASS S2-026 
+PASS S1-092 
+PASS S2-042 
+SUMMARY pass=18 fail=0

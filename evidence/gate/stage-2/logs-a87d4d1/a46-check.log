@@ -1,0 +1,8 @@
+PASS setup 
+PASS A-46 10/10 loads: options exactly the restaurant ids at the load event (last ['r_a', 'r_b'])
+PASS A-46 hostile name rendered as text: ['Anker </script><img src=x onerror="window.__pwned=1"><b>x</b> & "q" \u2028', 'Bistro']
+PASS A-46 no injection, no page errors []
+PASS A-46 with GET /restaurants held back, options at load are still the ids: ['r_a', 'r_b']
+PASS setup 
+PASS A-46 embedded list reflects the current state after reset: ['r_c']
+SUMMARY pass=7 fail=0

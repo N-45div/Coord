@@ -1,5 +1,6 @@
 """In-memory state: restaurants and their policies, users, tokens, reservations with their
-revisions and histories, recurring series, and idempotency receipts.
+revisions and histories, recurring series, seating plans and table closures, and
+idempotency receipts.
 
 `State` is plain data. Reset and import build a complete new `State` and swap it in whole;
 every read and write of the live one happens under `Store.lock` (store.py).
@@ -242,6 +243,52 @@ class Series:
                 "occurrences": [o.to_json() for o in self.occurrences]}
 
 
+# ----------------------------------------------------------------------------- seating plans
+
+@dataclass(frozen=True)
+class Closure:
+    """An applied table closure: the table is unusable during [start, end)."""
+    restaurant_id: str
+    table_id: str
+    start: datetime
+    end: datetime
+    plan_id: str
+
+    def blocks(self, table_ids, start: datetime, end: datetime) -> bool:
+        return self.table_id in table_ids and self.start < end and start < self.end
+
+    def to_json(self) -> dict:
+        return {"restaurant_id": self.restaurant_id, "table_id": self.table_id,
+                "start": timeutil.render(self.start), "end": timeutil.render(self.end),
+                "plan_id": self.plan_id}
+
+
+@dataclass
+class Plan:
+    """A previewed seating plan for a proposed closure (stage 4)."""
+    id: str
+    restaurant_id: str
+    closure: dict                 # {table_id, from, to} as supplied
+    start: datetime
+    end: datetime
+    restaurant_revision: int      # the restaurant revision it was planned against
+    assignments: list[dict]       # [{reference, table_ids, changed}] in reference order
+    moved_count: int
+    unused_seats: int
+    applied: bool = False
+
+    def preview(self) -> dict:
+        return {"plan_id": self.id, "restaurant_revision": self.restaurant_revision,
+                "closure": dict(self.closure),
+                "assignments": [dict(a, table_ids=list(a["table_ids"])) for a in self.assignments],
+                "moved_count": self.moved_count, "unused_seats": self.unused_seats}
+
+    def to_json(self) -> dict:
+        return {**self.preview(), "restaurant_id": self.restaurant_id,
+                "start": timeutil.render(self.start), "end": timeutil.render(self.end),
+                "applied": self.applied}
+
+
 @dataclass(frozen=True)
 class Receipt:
     """A completed idempotent request: the body it was made with and the response it got."""
@@ -266,6 +313,8 @@ class State:
     reservations: dict[str, Reservation] = field(default_factory=dict)
     by_reference: dict[str, str] = field(default_factory=dict)    # reference -> reservation id
     series: dict[str, Series] = field(default_factory=dict)
+    plans: dict[str, Plan] = field(default_factory=dict)
+    closures: list[Closure] = field(default_factory=list)
     receipts: dict[ReceiptKey, Receipt] = field(default_factory=dict)
     next_seq: int = 1
 
@@ -283,6 +332,9 @@ class State:
 
     def bump_restaurant(self, restaurant_id: str) -> None:
         self.restaurant_revision[restaurant_id] += 1
+
+    def closures_at(self, restaurant_id: str) -> list[Closure]:
+        return [c for c in self.closures if c.restaurant_id == restaurant_id]
 
     # -- users and tokens
 
@@ -330,6 +382,9 @@ class State:
 
     def new_series_id(self) -> str:
         return self._fresh_id("ser_", self.series)
+
+    def new_plan_id(self) -> str:
+        return self._fresh_id("plan_", self.plans)
 
     def new_reference(self) -> str:
         while True:
@@ -507,8 +562,8 @@ def state_from_fixture(fixture: dict, hasher) -> State:
 # ----------------------------------------------------------------------------- export/import
 
 STATE_SCHEMA = "tablekeeper-state"
-STATE_STAGE = 3
-READABLE_STAGES = (1, 2, 3)   # earlier stages' exports are upgraded on import (A-31)
+STATE_STAGE = 4
+READABLE_STAGES = (1, 2, 3, 4)   # earlier stages' exports are upgraded on import (A-31)
 
 
 def state_to_json(state: State) -> dict:
@@ -524,6 +579,8 @@ def state_to_json(state: State) -> dict:
         "tokens": [{"token_sha256": digest, "user_id": uid} for digest, uid in state.tokens.items()],
         "reservations": [r.to_json() for r in state.reservations.values()],
         "series": [s.to_json() for s in state.series.values()],
+        "plans": [p.to_json() for p in state.plans.values()],
+        "closures": [c.to_json() for c in state.closures],
         "receipts": [
             {"user_id": k[0], "method": k[1], "path": k[2], "key": k[3],
              "fingerprint": rec.fingerprint, "status": rec.status, "response": rec.response}
@@ -562,6 +619,17 @@ def state_from_json(obj: dict, valid_hash) -> State:
     for item in (_req(obj, "series", list) if stage >= 3 else []):
         series = _series_from_json(item, state)
         state.series[series.id] = series
+    for item in (_req(obj, "plans", list) if stage >= 4 else []):
+        plan = _plan_from_json(item, state)
+        state.plans[plan.id] = plan
+    for item in (_req(obj, "closures", list) if stage >= 4 else []):
+        closure = Closure(_id(item, "restaurant_id"), _id(item, "table_id"),
+                          timeutil.parse_instant(_req(item, "start", str)).astimezone(timeutil.UTC),
+                          timeutil.parse_instant(_req(item, "end", str)).astimezone(timeutil.UTC),
+                          _id(item, "plan_id"))
+        if closure.restaurant_id not in state.restaurants or closure.end <= closure.start:
+            raise ValueError("invalid closure")
+        state.closures.append(closure)
     for item in _req(obj, "receipts", list):
         key = (_req(item, "user_id", str), _req(item, "method", str), _req(item, "path", str),
                _req(item, "key", str))
@@ -619,3 +687,25 @@ def _series_from_json(item: dict, state: State) -> Series:
     if series.restaurant_id not in state.restaurants or not occurrences:
         raise ValueError("invalid series")
     return series
+
+
+def _plan_from_json(item: dict, state: State) -> Plan:
+    restaurant_id = _id(item, "restaurant_id")
+    if restaurant_id not in state.restaurants:
+        raise ValueError("plan at an unknown restaurant")
+    assignments = []
+    for a in _req(item, "assignments", list):
+        table_ids = _req(a, "table_ids", list)
+        if not all(isinstance(t, str) for t in table_ids):
+            raise ValueError("invalid assignment")
+        assignments.append({"reference": _reference(a), "table_ids": table_ids,
+                            "changed": _req(a, "changed", bool)})
+    closure = _req(item, "closure", dict)
+    return Plan(_id(item, "plan_id"), restaurant_id,
+                {"table_id": _req(closure, "table_id", str), "from": _req(closure, "from", str),
+                 "to": _req(closure, "to", str)},
+                timeutil.parse_instant(_req(item, "start", str)).astimezone(timeutil.UTC),
+                timeutil.parse_instant(_req(item, "end", str)).astimezone(timeutil.UTC),
+                _req(item, "restaurant_revision", int), assignments,
+                _req(item, "moved_count", int), _req(item, "unused_seats", int),
+                _req(item, "applied", bool))

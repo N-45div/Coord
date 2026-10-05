@@ -678,6 +678,7 @@
       renderBooking();
       showConfirmation();
       refreshAvailability();
+      refreshConfirmation(booking, result.data.reference);
       return;
     }
     if (result.status === 401) {
@@ -688,6 +689,23 @@
     }
     renderBooking();
     if (errorCode(result) === "table_unavailable") refreshAvailability();
+  }
+
+  /**
+   * A replayed booking response is the original one; show the booking as it is now (for
+   * example after a seating change moved it to other tables). Only server data is shown.
+   */
+  async function refreshConfirmation(booking, reference) {
+    try {
+      const current = await api("GET", `/reservations/${encodeURIComponent(reference)}`, { auth: true });
+      const shown = booking.confirmation && booking.confirmation.reservation.reference === reference;
+      if (current.status === 200 && search.booking === booking && shown) {
+        booking.confirmation = { ...booking.confirmation, reservation: current.data };
+        renderBooking();
+      }
+    } catch {
+      /* the confirmation from the booking response stands */
+    }
   }
 
   // ------------------------------------------------------------------ lookup

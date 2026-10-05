@@ -75,11 +75,13 @@ def availability(state: State, restaurant: Restaurant, day: date, party_size: in
     policy = state.policy_for(restaurant, day)
     duration = timeutil.minutes(policy.duration_minutes)
     booked = [r for r in state.at_restaurant(restaurant.id) if r.confirmed]
+    closures = state.closures_at(restaurant.id)
     options = [(ids, cap) for ids, cap in seating_options(restaurant, policy) if cap >= party_size]
     slots = []
     for local, start in day_slots(restaurant, policy, day):
         end = start + duration
         taken = {t for r in booked if r.overlaps(start, end) for t in r.table_ids}
+        taken.update(c.table_id for c in closures if c.start < end and start < c.end)
         free = [{"table_ids": list(ids), "capacity": cap}
                 for ids, cap in options if not taken.intersection(ids)]
         slot = {"starts_at_local": timeutil.format_local(local),
@@ -185,12 +187,16 @@ def ensure_free(state: State, restaurant: Restaurant, placements: dict[str, Plac
 
     `placements` maps the ids of bookings being (re)placed to where they will sit, in the
     order they are judged; a new booking uses a key no reservation has. Every other
-    confirmed booking at the restaurant keeps its current occupancy.
+    confirmed booking at the restaurant keeps its current occupancy, and an applied table
+    closure blocks its table like a booking (stage 4).
     """
     fixed = [r for r in state.at_restaurant(restaurant.id)
              if r.confirmed and r.id not in placements]
+    closures = state.closures_at(restaurant.id)
     moving = list(placements.values())
     for i, p in enumerate(moving):
+        if any(c.blocks(p.table_ids, p.start, p.end) for c in closures):
+            raise _taken()
         for r in fixed:
             if set(p.table_ids) & set(r.table_ids) and r.overlaps(p.start, p.end):
                 raise _taken()

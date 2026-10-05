@@ -36,6 +36,9 @@ ROUTES = [
     ("POST", "/restaurants/{id}/policies", "publish_policy"),
     ("POST", "/series", "create_series"),
     ("GET", "/series/{id}", "get_series"),
+    ("POST", "/series/{id}/amend", "amend_series"),
+    ("POST", "/restaurants/{id}/replans", "preview_replan"),
+    ("POST", "/restaurants/{id}/replans/{plan_id}/apply", "apply_replan"),
 ]
 _COMPILED = [(method, template.split("/")[1:], name) for method, template, name in ROUTES]
 

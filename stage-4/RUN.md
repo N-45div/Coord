@@ -1,8 +1,9 @@
-# Tablekeeper — stage 3: booking policies, history and recurring reservations
+# Tablekeeper — stage 4: seating changes and recurring amendments
 
 A restaurant reservation service: the HTTP API from stages 1-2 (reservations, combinable
 table pairs, the browser product), plus dated booking policies, availability explanations,
-reservation revisions and history, and recurring series. Python 3.12 standard library plus the
+reservation revisions and history, recurring series, seating plans after a table
+closure, and amendments of a whole series. Python 3.12 standard library plus the
 pinned IANA tz database (`tzdata`), installed at image build time; the page loads only its
 own script, stylesheet and icon, so nothing is fetched at run time. State is held in memory
 and starts empty; load it with `POST /_test/reset`.
@@ -12,7 +13,7 @@ and starts empty; load it with `POST /_test/reset`.
 From this folder:
 
 ```sh
-docker build -t tablekeeper-stage-3 . && docker run --rm -e PORT=8080 -p 8080:8080 tablekeeper-stage-3
+docker build -t tablekeeper-stage-4 . && docker run --rm -e PORT=8080 -p 8080:8080 tablekeeper-stage-4
 ```
 
 The service listens on `0.0.0.0:$PORT` (default `8080`) and answers `GET /health` with
@@ -33,8 +34,9 @@ installed (`pip install tzdata==2025.3`) on hosts that have no system zoneinfo.
 | `tablekeeper/api.py` | Endpoint handlers, authentication, idempotency (§6, §7), reset/export/import |
 | `tablekeeper/booking.py` | Availability (+ explanations), table-set rules, occupancy, create/amend/cancel, moves, history/decision reads |
 | `tablekeeper/policies.py` | Policy 0 and published policies: validation, selection by local date, accepted terms |
-| `tablekeeper/series.py` | Recurring series: adoption and reads |
-| `tablekeeper/model.py` | State data, fixture loading, export/import (de)serialisation, upgrade of stage 1-2 state |
+| `tablekeeper/series.py` | Recurring series: adoption, reads and series amendment |
+| `tablekeeper/replan.py` | Closure planning (exact branch-and-bound search) and plan application |
+| `tablekeeper/model.py` | State data, fixture loading, export/import (de)serialisation, upgrade of stage 1-3 state |
 | `tablekeeper/store.py` | The live state and the single lock around it |
 | `tablekeeper/timeutil.py` | Local times, IANA zones, DST gap/overlap resolution (§9) |
 | `tablekeeper/validate.py`, `jsonio.py`, `errors.py`, `passwords.py` | Field checks, strict JSON, §5 errors, scrypt |
@@ -58,14 +60,20 @@ installed (`pip install tzdata==2025.3`) on hosts that have no system zoneinfo.
   `booking.cancel` are the only places a booking's terms, revision and history change; each
   appends exactly one entry. No-ops return before them. Restaurant and series revisions are
   bumped once per operation by the operation itself.
+- **Closures.** An applied closure is held in `State.closures`; `booking.ensure_free` and
+  availability treat it like a booking on its table, so every write path respects it.
+- **Seating plans.** `replan._solve` searches assignments depth-first in reference order with
+  options in rank order and prunes on (moved, unused seats), which yields the exact
+  lexicographic optimum. `replan.apply` refuses a plan once the restaurant revision moved
+  (`stale_plan`) and records the closure and every reassignment in one locked step.
 - **All-or-nothing writes.** Writes validate everything first and mutate only after every
   check passed; a batch of moves or a series adoption is planned in full, checked once, then applied.
 - **Retries.** `Api._idempotent` looks up the `(user, method, path, Idempotency-Key)`
   receipt and stores the response in the same locked step as the write. Only successes are
   stored, so a key whose first use failed stays usable.
 - **Export/import.** Export serialises the whole state under the lock. Import builds and
-  validates a complete new state before swapping it in. Exports of the stage-1 and stage-2
-  services load too: their bookings get revision 1 under policy 0 with a synthesised
+  validates a complete new state before swapping it in. Exports of the stage-1 to stage-3
+  services load too; pre-stage-3 bookings get revision 1 under policy 0 with a synthesised
   `created` entry (and a `cancelled` entry at revision 2 when cancelled), decision A-31.
 
 ## Browser behaviour
@@ -97,5 +105,10 @@ installed (`pip install tzdata==2025.3`) on hosts that have no system zoneinfo.
   they start at revision 1 under policy 0; a seeded cancelled one also has its `cancelled`
   entry, still at revision 1 (decision A-43).
 - History `at` timestamps are rendered in the restaurant's time zone.
+- Planning is exact and unbounded up to the guaranteed size (6 tables, 4 declared pairs,
+  6 considered bookings). Larger inputs (up to 12 considered bookings) are planned under a
+  search budget and get `422 planning_limit` only if they exceed it.
+- After a booking succeeds, the confirmation shows the booking as it is now (fetched by
+  reference), so a replayed confirmation reflects a later seating change.
 - Signed out, choosing a table shows a sign-in prompt (`auth-error`) and keeps the search.
   Looking up a booking needs a sign-in, because reservations are owner-only.

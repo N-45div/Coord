@@ -7,10 +7,11 @@ created until every occurrence has passed, so a failure leaves nothing behind.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
-from .booking import (Placement, check_cutoff, ensure_free, new_reservation, owned, place,
-                      select_tables)
+from . import timeutil
+from .booking import (Placement, apply_change, check_cutoff, ensure_free, new_reservation, owned,
+                      place, select_tables)
 from .errors import ApiError, invalid, not_found
 from .model import Occurrence, Series, State, User
 from .validate import is_int
@@ -79,3 +80,46 @@ def owned_series(state: State, user: User | None, series_id: str) -> Series:
     if series is None or user is None or series.user_id != user.id:
         raise not_found("no such series")
     return series
+
+
+def amend(state: State, user: User, series_id: str, body: dict, now: datetime) -> dict:
+    """POST /series/{id}/amend: move eligible occurrences to a new clock time (decision A-40).
+
+    Eligible occurrences are those from `from_index` on that are neither cancelled nor
+    diner exceptions. Each keeps its scheduled date, table selection and party size; a real
+    change is validated like an individual PATCH. All of them commit or none does.
+    """
+    series = owned_series(state, user, series_id)
+    expected = body.get("expected_revision")
+    if not is_int(expected) or expected < 1:
+        raise invalid("expected_revision must be a positive integer")
+    from_index = _bounded(body, "from_index", 0, len(series.occurrences) - 1)
+    raw_time = body.get("local_time")
+    try:
+        minutes = timeutil.parse_hhmm(raw_time)
+    except ValueError:
+        raise invalid("local_time must be HH:MM from 00:00 to 23:59") from None
+    if expected != series.revision:
+        raise ApiError(409, "stale_revision", "the series has changed since that revision")
+
+    restaurant = state.restaurants[series.restaurant_id]
+    clock = time(minutes // 60, minutes % 60)
+    planned: dict[str, Placement] = {}
+    for occurrence in series.occurrences:
+        res = state.reservations[occurrence.reservation_id]
+        if occurrence.index < from_index or occurrence.exception or not res.confirmed:
+            continue
+        local = datetime.combine(occurrence.scheduled, clock)
+        if local == res.local:
+            continue                       # identical result: a no-op keeps its terms
+        check_cutoff(res, now)
+        planned[res.id] = place(state, restaurant, select_tables(restaurant, res.table_ids),
+                                local, res.party_size)
+    ensure_free(state, restaurant, planned)
+
+    for res_id, placement in planned.items():
+        apply_change(state, restaurant, state.reservations[res_id], placement, now, exception=False)
+    if planned:
+        series.revision += 1
+        state.bump_restaurant(restaurant.id)
+    return view(state, series)

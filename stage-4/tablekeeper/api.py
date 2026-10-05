@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable
 
-from . import booking, series, timeutil
+from . import booking, replan, series, timeutil
 from .errors import ApiError, invalid, not_found, unauthenticated
 from .jsonio import depth, fingerprint, parse_object
 from .model import Receipt, State, User, state_from_fixture, state_from_json, state_to_json
@@ -271,6 +271,32 @@ class Api:
             body = parse_object(req.body)
             return self._idempotent(state, user, req, body,
                                     lambda: series.adopt(state, user, body, timeutil.now()))
+
+    def amend_series(self, req: Request) -> Response:
+        with self.store.lock:
+            state = self.store.state
+            user = self._caller(state, req)
+            body = parse_object(req.body)
+            return self._idempotent(state, user, req, body, lambda: series.amend(
+                state, user, req.params["id"], body, timeutil.now()))
+
+    # ------------------------------------------------------------------ seating plans (stage 4)
+
+    def preview_replan(self, req: Request) -> Response:
+        with self.store.lock:
+            state = self.store.state
+            user = self._caller(state, req)
+            body = parse_object(req.body)
+            return self._idempotent(state, user, req, body, lambda: replan.preview(
+                state, user, req.params["id"], body))
+
+    def apply_replan(self, req: Request) -> Response:
+        with self.store.lock:
+            state = self.store.state
+            user = self._caller(state, req)
+            body = parse_object(req.body)
+            return self._idempotent(state, user, req, body, lambda: replan.apply(
+                state, user, req.params["id"], req.params["plan_id"], timeutil.now()))
 
     def get_series(self, req: Request) -> Response:
         with self.store.lock:

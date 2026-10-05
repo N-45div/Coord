@@ -122,8 +122,11 @@ def _taken() -> ApiError:
 
 
 def check_cutoff(restaurant: Restaurant, res: Reservation, now: datetime) -> None:
-    """Refused when now is within the cutoff of the current start, or later (A-03)."""
-    if now >= res.start - timeutil.minutes(restaurant.cutoff_minutes):
+    """Refused when now is within the cutoff of the current start, or later (A-03).
+
+    Compared in seconds so that any cutoff, however large, cannot overflow date arithmetic.
+    """
+    if (res.start - now).total_seconds() <= restaurant.cutoff_minutes * 60:
         raise ApiError(409, "cutoff_passed", "too close to the start to change or cancel")
 
 

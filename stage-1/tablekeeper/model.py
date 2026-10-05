@@ -19,7 +19,9 @@ from .validate import MAX_ID, is_int
 CONFIRMED = "confirmed"
 CANCELLED = "cancelled"
 _REFERENCE_ALPHABET = string.ascii_uppercase + string.digits
-MAX_MINUTES = 366 * 24 * 60          # bound on a restaurant's slot, duration and cutoff
+# Slot and duration bound (~950 years) that keeps start + duration inside datetime's range.
+# The cutoff has no bound: it is compared numerically, never added to a date.
+MAX_MINUTES = 500_000_000
 _REFERENCE = re.compile(r"[A-Z0-9]{6,12}")   # §8: 6 to 12 characters of A-Z0-9
 
 
@@ -299,8 +301,8 @@ def restaurant_from_json(obj: dict) -> Restaurant:
     cutoff = obj.get("cancellation_cutoff_minutes", 0)
     if not is_int(cutoff) or cutoff < 0:
         raise ValueError("cancellation_cutoff_minutes must be a non-negative integer")
-    if not (1 <= slot <= MAX_MINUTES and 1 <= duration <= MAX_MINUTES and cutoff <= MAX_MINUTES):
-        raise ValueError("slot, duration and cutoff minutes are out of range")
+    if not (1 <= slot <= MAX_MINUTES and 1 <= duration <= MAX_MINUTES):
+        raise ValueError("slot_minutes and reservation_duration_minutes are out of range")
     hours = []
     for entry in _list(obj, "opening_hours"):
         weekday = _req(entry, "weekday", str)

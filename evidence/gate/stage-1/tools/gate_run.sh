@@ -14,7 +14,7 @@ log "worktree HEAD $(git -C "$WT" rev-parse HEAD) status: '$(git -C "$WT" status
 IMG=tk-gate-s$N-$SHORT
 timeout 60 docker rm -f tk-gate-a tk-gate-b tk-gate-c >/dev/null 2>&1
 t0=$(date +%s)
-timeout 900 docker build -t "$IMG" "$WT/stage-$N" >"$OUT/build.log" 2>&1; rc=$?
+timeout 900 docker build --no-cache -t "$IMG" "$WT/stage-$N" >"$OUT/build.log" 2>&1; rc=$?
 log "docker build rc=$rc in $(( $(date +%s) - t0 ))s (image $IMG)"
 [ $rc -ne 0 ] && exit 1
 timeout 60 docker image inspect "$IMG" --format 'image size {{.Size}} bytes' | tee -a "$OUT/driver.log"
@@ -28,11 +28,11 @@ wait_health() { # port name
   done
   log "$2 NOT healthy within 60s"; return 1
 }
-timeout 60 docker run -d --name tk-gate-a --cpus 2 --memory 2g -e PORT=8080 -p 18083:8080 "$IMG" >/dev/null; wait_health 18083 "A(PORT=8080,2cpu,2g)"
-timeout 60 docker run -d --name tk-gate-b --cpus 2 --memory 2g -p 18084:8080 "$IMG" >/dev/null; wait_health 18084 "B(no PORT env -> default 8080)"
-timeout 60 docker run -d --name tk-gate-c --cpus 2 --memory 2g -e PORT=9123 -p 18085:9123 "$IMG" >/dev/null; wait_health 18085 "C(PORT=9123)"
+timeout 60 docker run -d --name tk-gate-a --cpus 2 --memory 2g -e PORT=8080 -p 18383:8080 "$IMG" >/dev/null; wait_health 18383 "A(PORT=8080,2cpu,2g)"
+timeout 60 docker run -d --name tk-gate-b --cpus 2 --memory 2g -p 18384:8080 "$IMG" >/dev/null; wait_health 18384 "B(no PORT env -> default 8080)"
+timeout 60 docker run -d --name tk-gate-c --cpus 2 --memory 2g -e PORT=9123 -p 18385:9123 "$IMG" >/dev/null; wait_health 18385 "C(PORT=9123)"
 log "probe start"
-py -3.12 C:/Users/DivijN/dark-factory/band-work/scratch/gate/tk/probe_s$N.py http://127.0.0.1:18083 http://127.0.0.1:18085 >"$OUT/probe.log" 2>&1
+py -3.12 C:/Users/DivijN/dark-factory/band-work/scratch/gate/tk/probe_s$N.py http://127.0.0.1:18383 http://127.0.0.1:18385 >"$OUT/probe.log" 2>&1
 log "probe rc=$? :: $(grep SUMMARY "$OUT/probe.log")"
 timeout 60 docker stats --no-stream --format '{{.Name}} cpu={{.CPUPerc}} mem={{.MemUsage}}' tk-gate-a tk-gate-b tk-gate-c | tee -a "$OUT/driver.log"
 timeout 60 docker logs tk-gate-a >"$OUT/container-a.log" 2>&1

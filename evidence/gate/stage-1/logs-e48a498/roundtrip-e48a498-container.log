@@ -1,0 +1,45 @@
+PASS reset 
+PASS create depth=1000 list -> 201 
+PASS moves depth=1000 list -> 201 
+PASS replay create on source -> 200 original 
+PASS create depth=1000 object -> 201 
+PASS moves depth=1000 object -> 201 
+PASS replay create on source -> 200 original 
+PASS create depth=1400 list -> 201 
+PASS moves depth=1400 list -> 201 
+PASS replay create on source -> 200 original 
+PASS create depth=1400 object -> 201 
+PASS moves depth=1400 object -> 201 
+PASS replay create on source -> 200 original 
+PASS create depth=1490 list -> 201 
+PASS moves depth=1490 list -> 201 
+PASS replay create on source -> 200 original 
+PASS create depth=1490 object -> 201 
+PASS moves depth=1490 object -> 201 
+PASS replay create on source -> 200 original 
+PASS export 200 
+export bytes=86266
+PASS import unchanged export into FRESH instance -> 204 
+PASS fresh: replay c-1000-list -> 200 original 
+PASS fresh: replay m-1000-list -> 200 original 
+PASS fresh: reuse c-1000-list with different body -> 409 
+PASS fresh: replay c-1000-object -> 200 original 
+PASS fresh: replay m-1000-object -> 200 original 
+PASS fresh: reuse c-1000-object with different body -> 409 
+PASS fresh: replay c-1400-list -> 200 original 
+PASS fresh: replay m-1400-list -> 200 original 
+PASS fresh: reuse c-1400-list with different body -> 409 
+PASS fresh: replay c-1400-object -> 200 original 
+PASS fresh: replay m-1400-object -> 200 original 
+PASS fresh: reuse c-1400-object with different body -> 409 
+PASS fresh: replay c-1490-list -> 200 original 
+PASS fresh: replay m-1490-list -> 200 original 
+PASS fresh: reuse c-1490-list with different body -> 409 
+PASS fresh: replay c-1490-object -> 200 original 
+PASS fresh: replay m-1490-object -> 200 original 
+PASS fresh: reuse c-1490-object with different body -> 409 
+PASS fresh: 6 bookings, none duplicated by replays 
+PASS import with deep ignored envelope field -> 204 
+NOTE import of state with an extra 100-deep field -> 422 {'error': {'code': 'validation_failed', 'message': 'state is nested too deeply to have been exported by this service'}}
+PASS state intact after that import attempt 
+SUMMARY pass=42 fail=0

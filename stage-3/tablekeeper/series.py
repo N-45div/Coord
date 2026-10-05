@@ -1,7 +1,9 @@
 """Recurring reservations: adopting a booking as occurrence zero of a weekly series (stage 3).
 
-Runs with the store lock held. Adoption plans every occurrence first, checks occupancy for
-all of them at once, and only then creates them, so a failure leaves nothing behind.
+Runs with the store lock held. Adoption judges the occurrences in index order, each with
+the ordinary booking order (rules, then occupancy against existing bookings and the earlier
+occurrences), so the first failing occurrence decides the error (decision A-30). Nothing is
+created until every occurrence has passed, so a failure leaves nothing behind.
 """
 from __future__ import annotations
 
@@ -46,7 +48,7 @@ def adopt(state: State, user: User, body: dict, now: datetime) -> dict:
         day = anchor.local.date() + timedelta(weeks=index * interval)
         local = datetime.combine(day, anchor.local.time())
         planned[f"occurrence {index}"] = place(state, restaurant, tables, local, anchor.party_size)
-    ensure_free(state, restaurant, planned)
+        ensure_free(state, restaurant, planned)   # this occurrence's occupancy, before the next
 
     series = Series(state.new_series_id(), user.id, restaurant.id, interval, 1,
                     [Occurrence(0, anchor.id, anchor.local.date())])

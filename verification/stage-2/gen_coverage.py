@@ -74,7 +74,7 @@ def main():
     unknown = sorted(set(by_id) - {i for i, _ in items})
     lines += ["", f"Uncovered without a reason: {', '.join(uncovered) if uncovered else 'none'}.",
               f"Marker ids not in the ledger: {', '.join(unknown) if unknown else 'none'}.", ""]
-    (HERE / "COVERAGE.md").write_text("\n".join(lines), encoding="utf-8")
+    (HERE / "COVERAGE.md").write_text("\n".join(lines), encoding="utf-8", newline="\n")
     print(f"{len(items)} ledger items, {len(mapping)} test cases, uncovered: {uncovered}, unknown: {unknown}")
 
 

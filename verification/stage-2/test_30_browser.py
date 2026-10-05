@@ -101,6 +101,8 @@ def test_signup_login_logout_and_auth_error(uw, page, api):
     ui.wait_visible(page, "auth-error")
     assert ui.text(page, "auth-error")
     T(page, "signup-email").fill("neo@example.com")
+    T(page, "signup-password").fill("long enough pw")
+    T(page, "signup-display-name").fill("Neo")
     T(page, "signup-submit").click()
     ui.wait_visible(page, "current-user")
     assert "Neo" in ui.text(page, "current-user")
@@ -114,6 +116,7 @@ def test_signup_login_logout_and_auth_error(uw, page, api):
     T(page, "login-password").fill("wrong password")
     T(page, "login-submit").click()
     ui.wait_visible(page, "auth-error")
+    T(page, "login-email").fill("neo@example.com")
     T(page, "login-password").fill("long enough pw")
     T(page, "login-submit").click()
     ui.wait_visible(page, "current-user")
@@ -124,8 +127,9 @@ def test_signup_login_logout_and_auth_error(uw, page, api):
 @pytest.mark.ledger("S2-003")
 def test_current_user_on_every_screen(uw, page):
     ada_ui(page)
-    for path in ("/", "/lookup", "/login", "/signup"):
-        page.goto(ui.url(path))
+    page.goto(ui.url("/"))
+    for path in ("/lookup", "/", "/login", "/signup"):
+        ui.nav(page, path)
         ui.wait_visible(page, "current-user")
         assert "Ada" in ui.text(page, "current-user"), path
 
@@ -358,11 +362,14 @@ def test_lost_request_then_confirmed_rejection_shows_booking_error(uw, page, api
 
 @pytest.mark.ledger("S2-009")
 def test_late_search_response_never_restores_old_results(uw, page, api):
+    ada_ui(page)
     page.goto(ui.url("/"))
     held = []
 
     def hold_anker(route):
-        if "r_anker" in route.request.url and not held:
+        req = route.request
+        is_search = "/availability" in req.url or req.resource_type == "document"
+        if "r_anker" in req.url and is_search and not held:
             held.append(route)
         else:
             route.continue_()
@@ -381,6 +388,10 @@ def test_late_search_response_never_restores_old_results(uw, page, api):
     assert got, "grid disappeared"
     assert not [k for k in got if k.startswith("slot-t_")], "late response A replaced the grid of search B"
     assert "slot-c_1-19:00" in got
+    T(page, "slot-c_1-19:00").first.click()
+    ui.wait_visible(page, "booking-form")
+    summary = ui.text(page, "booking-summary")
+    assert "Fenster" in summary, f"booking form does not describe search B: {summary!r}"
 
 
 # ---- lookup ------------------------------------------------------------------------------
@@ -521,7 +532,7 @@ def test_inputs_have_visible_labels(uw, page, path, ids):
     page.goto(ui.url(path))
     for i in ids:
         ok = T(page, i).first.evaluate("""el => {
-            const vis = n => n && n.offsetParent !== null && n.innerText.trim().length > 0;
+            const vis = n => n && n.getClientRects().length > 0 && n.innerText.trim().length > 0;
             if (el.labels && Array.from(el.labels).some(vis)) return true;
             const ref = el.getAttribute('aria-labelledby');
             if (ref) return ref.split(/\\s+/).some(id => vis(document.getElementById(id)));

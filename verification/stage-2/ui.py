@@ -55,6 +55,17 @@ def shot(page, name):
         page.screenshot(path=os.path.join(SHOTS, f"{name}.png"), full_page=True)
 
 
+def nav(page, path):
+    """Navigate like a user: follow an in-app link to `path` when one is visible, else load the URL."""
+    link = page.locator(f'a[href="{path}"]')
+    for i in range(link.count()):
+        if link.nth(i).is_visible():
+            link.nth(i).click()
+            page.wait_for_load_state()
+            return
+    page.goto(url(path))
+
+
 def login(page, email, password):
     page.goto(url("/login"))
     T(page, "login-email").fill(email)

@@ -179,6 +179,10 @@ Collected test cases: 493.
 | A-24 | Lookup while signed out | `test_30_browser.py::test_signed_out_lookup` |  |
 | A-25 | Retry identity | `test_30_browser.py::test_signed_in_browser_and_pending_retry_survive_export_import` |  |
 | A-26 | "Present only when there is one" | `test_30_browser.py::test_signup_login_logout_and_auth_error` |  |
+| A-43 | Seeded cancelled bookings | — | stage-3 decision (revisions); not applicable to stage 2 |
+| A-44 | Pre-1893 local-mean-time offsets | — | pre-1893 local mean time offsets are out of scope (ledger); not tested |
+| A-45 | Restaurant options filled after load. | — | superseded by A-46 |
+| A-46 | A-45 revised after Gate's measurement | `test_30_browser.py::test_restaurant_select_holds_only_ids_at_load` |  |
 
 Uncovered without a reason: none.
-Marker ids not in the ledger: A-46.
+Marker ids not in the ledger: none.

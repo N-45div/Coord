@@ -94,6 +94,10 @@ acknowledged every part.
 | 3 | 00:27 → 01:44 | 1 | `0720c48` | claimed stage 3 (120/120, 25/25, 7/7) |
 | 4 | 01:47 → 02:44 | 0 | `7ad0f29` | claimed stage 4 (suites 1–4 pass) |
 
+After the run, the operator cloned this repository fresh and ran the organisers' harness
+with `--all --mode isolated` (via WSL): `stage-1/` to `stage-4/` each claim their own stage
+on the shipped checks, and each fails the next stage's suite as it should.
+
 Independent tests at the end: 404 (stage 1), 492 (stage 2), 598 (stage 3), 679 (stage 4).
 Ledger coverage: 105/105, 42/42, 51/51, 30/30.
 

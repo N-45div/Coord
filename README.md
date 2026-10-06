@@ -1,4 +1,4 @@
-# Lights Out: Tablekeeper, built by a four-seat dark factory
+# Coord: Tablekeeper, built by a four-seat dark factory
 
 **Track:** tablekeeper (restaurant reservations) · **Team:** N Divij (solo) ·
 **Event:** WeAreDevelopers × BAND, Dark Factory (lablab.ai)

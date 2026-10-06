@@ -1,0 +1,36 @@
+{
+  "track": "tablekeeper",
+  "folders": {
+    "1": {
+      "claimed": true,
+      "share": 1.0,
+      "overshoot": null,
+      "highest_contiguous": 1,
+      "report": "stage-1/report.json"
+    },
+    "2": {
+      "claimed": true,
+      "share": 1.0,
+      "overshoot": null,
+      "highest_contiguous": 2,
+      "report": "stage-2/report.json"
+    },
+    "3": {
+      "claimed": true,
+      "share": 1.0,
+      "overshoot": null,
+      "highest_contiguous": 3,
+      "report": "stage-3/report.json"
+    },
+    "4": {
+      "claimed": true,
+      "share": 1.0,
+      "overshoot": null,
+      "highest_contiguous": 4,
+      "report": "stage-4/report.json"
+    }
+  },
+  "run_id": "operator-fresh-clone-all-isolated",
+  "mode": "isolated",
+  "preview": true
+}

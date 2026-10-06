@@ -17,6 +17,7 @@ checks never caught, and cost about $145 at list prices.
 
 | Path | What it is |
 |---|---|
+| [`EVIDENCE.md`](EVIDENCE.md) | Every claim mapped to the file or commit that proves it, plus commands to reproduce the key results |
 | [`FACTORY.md`](FACTORY.md) | The factory: seats, flow, design choices and their cost, measured time and spend, what it caught, how to stand it up |
 | [`mandates/`](mandates) | The four seats' standing instructions. Generic: no track names, endpoints, fields or error codes. Committed before the run |
 | [`dispatch.md`](dispatch.md) | The one human message that started the run, verbatim |

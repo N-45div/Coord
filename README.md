@@ -1,7 +1,7 @@
 # Coord: Tablekeeper, built by a four-seat dark factory
 
 **Track:** tablekeeper (restaurant reservations) · **Team:** N Divij (solo) ·
-**Event:** WeAreDevelopers × BAND, Dark Factory (lablab.ai)
+**Event:** WeAreDevelopers × BAND, Dark Factory (lablab.ai) · **Demo:** https://coord-site.vercel.app
 
 Four Claude Code seats in one Band Desktop room (Coordinator, Builder, Verifier and Gate)
 built this service from one human message, with no human input after it. The seat that
